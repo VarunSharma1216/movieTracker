@@ -1,0 +1,34 @@
+{
+  "name": "my-tracker-app",
+  "version": "1.0.0",
+  "description": "A simple movie and TV show tracker.",
+  "main": "index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ant-design/icons": "^5.5.1",
+    "antd": "^5.21.6",
+    "axios": "^1.7.7",
+    "firebase": "^10.0.0",
+    "firebaseui": "^6.1.0",
+    "react-router-dom": "^6.27.0",
+    "react-scripts": "^5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

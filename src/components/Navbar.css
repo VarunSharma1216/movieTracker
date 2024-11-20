@@ -1,0 +1,44 @@
+.navbar {
+  display: flex;
+  align-items: center; /* Vertically centers items */
+  padding: 0.3rem 2rem;
+  background-color: #302c44;
+  color: #fff;
+}
+
+.navbar-logo {
+  font-size: 1.5rem; /* Size of the logo */
+  display: flex;
+  align-items: center; /* Center vertically */
+}
+
+.navbar-logo a {
+  color: #fff; /* Sets link text color to white */
+  text-decoration: none; /* Removes underline */
+}
+
+
+.navbar-links {
+  list-style-type: none; /* Removes bullet points */
+  display: flex; /* Aligns links horizontally */
+  gap: 1rem; /* Space between links */
+  margin: 0 auto; /* Centers the links */
+  flex-grow: 1; /* Allows the links section to take available space */
+  justify-content: center; /* Center links in the available space */
+}
+
+.navbar-links li a {
+  color: #fff; /* Link color */
+  text-decoration: none; /* Removes underline */
+  transition: color 0.3s ease; /* Smooth transition effect */
+}
+
+.navbar-links li a:hover,
+.navbar-logo a:hover {
+  color: #1890ff; /* Blue color on hover */
+  text-decoration: none; /* Remove underline on hover */
+}
+
+.avatar-icon {
+  margin-right: 20px; /* Adjust this value to create more or less space */
+}

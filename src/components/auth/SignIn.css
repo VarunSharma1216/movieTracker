@@ -1,0 +1,10 @@
+/* Custom Styles */
+.sign-in-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    padding: 20px;
+  }
+  
