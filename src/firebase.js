@@ -7,14 +7,15 @@ import { getFirestore } from "firebase/firestore";  // Add this import
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBMxmY6-oyi_Qcd-xjfz648AaNeXBjksGA",
-  authDomain: "movietracker-9fb87.firebaseapp.com",
-  projectId: "movietracker-9fb87",
-  storageBucket: "movietracker-9fb87.firebasestorage.app",
-  messagingSenderId: "814908651052",
-  appId: "1:814908651052:web:ea62c7c8499fbb29fcc389",
-  measurementId: "G-GM5PZW5S99"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

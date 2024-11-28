@@ -16,6 +16,8 @@
     "axios": "^1.7.7",
     "firebase": "^10.0.0",
     "firebaseui": "^6.1.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.1",
     "react-router-dom": "^6.27.0",
     "react-scripts": "^5.0.1"
   },

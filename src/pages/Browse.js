@@ -20,6 +20,7 @@ const Browse = () => {
 
   // To keep track of movie IDs to avoid duplicates
   const movieIds = new Set();
+  const apiKey = process.env.REACT_APP_TMDB_API_KEY; // Access API key from environment variable
 
   // Fetch movies based on selected category and current page
   useEffect(() => {
@@ -27,7 +28,7 @@ const Browse = () => {
       try {
         const category = selectedCategory; // either "popular", "top_rated", or "trending"
         const response = await axios.get(
-          `https://api.themoviedb.org/3/movie/${category}?api_key=5b1e46f8671d3e0273ac66be030ba0de&page=${currentPage}`
+          `https://api.themoviedb.org/3/movie/${category}?api_key=${apiKey}&page=${currentPage}`
         );
 
         const newMovies = response.data.results.filter(movie => {
@@ -60,13 +61,13 @@ const Browse = () => {
         const [movieResponse, tvResponse] = await Promise.all([
           axios.get(`https://api.themoviedb.org/3/search/movie`, {
             params: {
-              api_key: "5b1e46f8671d3e0273ac66be030ba0de",
+              api_key: apiKey,
               query: value,
             },
           }),
           axios.get(`https://api.themoviedb.org/3/search/tv`, {
             params: {
-              api_key: "5b1e46f8671d3e0273ac66be030ba0de",
+              api_key: apiKey,
               query: value,
             },
           }),
