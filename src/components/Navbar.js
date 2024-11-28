@@ -24,13 +24,13 @@ const Navbar = () => {
         const [movieResponse, tvResponse] = await Promise.all([
           axios.get(`https://api.themoviedb.org/3/search/movie`, {
             params: {
-              api_key: "5b1e46f8671d3e0273ac66be030ba0de",
+              api_key: process.env.REACT_APP_TMDB_API_KEY, // Use environment variable for API key
               query: value,
             },
           }),
           axios.get(`https://api.themoviedb.org/3/search/tv`, {
             params: {
-              api_key: "5b1e46f8671d3e0273ac66be030ba0de",
+              api_key: process.env.REACT_APP_TMDB_API_KEY, // Use environment variable for API key
               query: value,
             },
           }),
@@ -105,9 +105,6 @@ const Navbar = () => {
       setSearchResults([]);
     }
   };
-  
-  
-  
 
   const handleSelect = (value) => {
     const [type, id] = value.split("-"); // Split the prefix and ID
@@ -117,7 +114,6 @@ const Navbar = () => {
       navigate(`/tv/${id}`); // Navigate to the TV show detail page
     }
   };
-  
 
   return (
     <div className="navbar">
@@ -151,13 +147,12 @@ const Navbar = () => {
       {showSearch && (
         <div className="search-bar">
           <AutoComplete
-  style={{ width: 300, margin: "10px auto", display: "block" }}
-  options={searchResults} // Dropdown options
-  onSearch={handleSearchChange} // Called on input change
-  onSelect={handleSelect} // Called when an option is selected
-  placeholder="Search for movies and TV shows..."
-/>
-
+            style={{ width: 300, margin: "10px auto", display: "block" }}
+            options={searchResults} // Dropdown options
+            onSearch={handleSearchChange} // Called on input change
+            onSelect={handleSelect} // Called when an option is selected
+            placeholder="Search for movies and TV shows..."
+          />
         </div>
       )}
     </div>
