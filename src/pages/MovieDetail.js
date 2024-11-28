@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { message, Button, Dropdown, Card, Typography, Image, Spin, Alert, Row, Col } from 'antd';
 import { auth, db } from '../firebase'; // Make sure to import auth and db from your Firebase setup
-import { doc, setDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
 
 const { Title, Text } = Typography;
 const items = [
@@ -19,8 +19,35 @@ const MovieDetail = () => {
   const [error, setError] = useState(null);
   const [option, setOption] = useState('Click to Select an Option');
 
+  // Function to fetch the movie's current status in Firebase
+  const fetchMovieStatus = async (movieId) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const watchlistRef = doc(db, 'watchlists', user.uid);
+      const watchlistSnapshot = await getDoc(watchlistRef);
+
+      if (watchlistSnapshot.exists()) {
+        const watchlistData = watchlistSnapshot.data();
+
+        // Check each list to see where the movie exists
+        for (const [listName, listMovies] of Object.entries(watchlistData)) {
+          const movieExists = listMovies.some((item) => item.id === parseInt(movieId));
+          if (movieExists) {
+            setOption(listName.charAt(0).toUpperCase() + listName.slice(1)); // Capitalize the list name
+            return;
+          }
+        }
+      }
+      setOption('Click to Select an Option'); // Default if the movie isn't in any list
+    } catch (error) {
+      console.error('Error fetching movie status:', error);
+    }
+  };
+
   // Function to add movie to the watchlist
-  const addToWatchlist = async (movie, list) => {
+  const addToWatchlist = async (movie, targetList) => {
     const user = auth.currentUser;
     if (!user) {
       message.error('You must be logged in to add movies to your watchlist.');
@@ -31,12 +58,34 @@ const MovieDetail = () => {
 
     try {
       const watchlistRef = doc(db, 'watchlists', user.uid);
-      
-      // Ensure that the movie object being added to Firestore contains necessary details.
+      const watchlistSnapshot = await getDoc(watchlistRef);
+
+      if (watchlistSnapshot.exists()) {
+        const watchlistData = watchlistSnapshot.data();
+
+        // Check for the movie in all lists
+        for (const [listName, listMovies] of Object.entries(watchlistData)) {
+          const movieIndex = listMovies.findIndex((item) => item.id === id);
+
+          if (movieIndex !== -1) {
+            // Movie found in another list, remove it
+            const updatedList = listMovies.filter((item) => item.id !== id);
+            await setDoc(
+              watchlistRef,
+              { [listName]: updatedList },
+              { merge: true }
+            );
+
+            break;
+          }
+        }
+      }
+
+      // Add the movie to the target list
       await setDoc(
         watchlistRef,
         {
-          [list]: arrayUnion({
+          [targetList]: arrayUnion({
             id,
             title,
             poster_path,
@@ -47,19 +96,17 @@ const MovieDetail = () => {
         },
         { merge: true }
       );
-
-      message.success(`Movie added to ${list} list!`);
     } catch (error) {
-      message.error(`Error adding movie to watchlist: ${error.message}`);
+      message.error(`Error updating watchlist: ${error.message}`);
     }
   };
 
   // onClick handler that updates the option state with the selected label and adds to the watchlist
   const onClick = ({ key }) => {
-    const selectedItem = items.find(item => item.key === key);
+    const selectedItem = items.find((item) => item.key === key);
     if (selectedItem) {
       setOption(selectedItem.label); // Update the button text to the label
-      message.info(`Added to ${selectedItem.label} list`); // Show the selected label in the message
+      message.info(`Added to ${selectedItem.label} list`, 0.7); // Show the selected label in the message
 
       // Add the movie to the corresponding watchlist
       addToWatchlist(movie, selectedItem.label.toLowerCase()); // Use the label as the list name
@@ -73,6 +120,9 @@ const MovieDetail = () => {
           `https://api.themoviedb.org/3/movie/${movieId}?api_key=5b1e46f8671d3e0273ac66be030ba0de`
         );
         setMovie(response.data);
+
+        // Fetch the movie's status in the watchlist
+        fetchMovieStatus(movieId);
       } catch (error) {
         setError(error);
       } finally {
