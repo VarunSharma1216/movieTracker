@@ -15,18 +15,31 @@ const Browse = () => {
   const [selectedGenre, setSelectedGenre] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('popular'); // default category
+  const [currentPage, setCurrentPage] = useState(1); // New state for pagination
   const navigate = useNavigate();
 
-  // Fetch movies based on selected category
+  // To keep track of movie IDs to avoid duplicates
+  const movieIds = new Set();
+
+  // Fetch movies based on selected category and current page
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         const category = selectedCategory; // either "popular", "top_rated", or "trending"
         const response = await axios.get(
-          `https://api.themoviedb.org/3/movie/${category}?api_key=5b1e46f8671d3e0273ac66be030ba0de`
+          `https://api.themoviedb.org/3/movie/${category}?api_key=5b1e46f8671d3e0273ac66be030ba0de&page=${currentPage}`
         );
-        setMovies(response.data.results);
-        setFilteredMovies(response.data.results);
+
+        const newMovies = response.data.results.filter(movie => {
+          if (!movieIds.has(movie.id)) {
+            movieIds.add(movie.id);
+            return true;
+          }
+          return false;
+        });
+
+        setMovies(prevMovies => [...prevMovies, ...newMovies]);
+        setFilteredMovies(prevMovies => [...prevMovies, ...newMovies]);
       } catch (error) {
         setError(error);
       } finally {
@@ -35,7 +48,7 @@ const Browse = () => {
     };
 
     fetchMovies();
-  }, [selectedCategory]); // Re-fetch when category changes
+  }, [selectedCategory, currentPage]); // Re-fetch when category or page changes
 
   // Handle search query change to fetch all movies
   const handleSearchChange = async (e) => {
@@ -84,7 +97,16 @@ const Browse = () => {
           (a, b) => b.popularity - a.popularity
         );
 
-        setFilteredMovies(combinedResults);
+        // Filter out duplicates based on IDs
+        const uniqueResults = combinedResults.filter((movie) => {
+          if (!movieIds.has(movie.id)) {
+            movieIds.add(movie.id);
+            return true;
+          }
+          return false;
+        });
+
+        setFilteredMovies(uniqueResults);
       } catch (error) {
         console.error("Error fetching search results:", error);
         setFilteredMovies([]);
@@ -109,6 +131,15 @@ const Browse = () => {
   // Handle category filter change
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
+    setCurrentPage(1); // Reset to first page when category changes
+    setMovies([]); // Clear previous movies
+    setFilteredMovies([]); // Clear filtered movies
+    movieIds.clear(); // Reset the Set to prevent duplicate movie IDs
+  };
+
+  // Load more movies for the next page
+  const loadMoreMovies = () => {
+    setCurrentPage((prevPage) => prevPage + 1);
   };
 
   // Filter movies based on search query, genre, and year
@@ -225,6 +256,13 @@ const Browse = () => {
             <h2>{movie.title}</h2>
           </div>
         ))}
+      </div>
+
+      {/* Load More Button */}
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <Button onClick={loadMoreMovies} type="primary">
+          Load More
+        </Button>
       </div>
     </div>
   );

@@ -162,7 +162,7 @@ const Watchlist = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
-      <h2 style={{ textAlign: 'center' }}>Your Watchlist</h2>
+      <h2 style={{ textAlign: 'Left' }}>Your Watchlist</h2>
       <Divider>Watching</Divider>
       <Table
         dataSource={watchingMovies.map((movie) => ({ ...movie, key: movie.id }))}
