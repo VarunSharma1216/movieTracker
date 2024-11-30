@@ -124,14 +124,20 @@ const Navbar = () => {
       </div>
 
       <ul className="navbar-links">
+      <li>
+          <Link to="/profile">Profile</Link>
+        </li>
+      <li>
+          {/* Link to the watchlist section on the current page */}
+          <Link to="/profile#movielist-section">Movie List</Link>
+        </li>
+        <li>
+          {/* Link to the watchlist section on the current page */}
+          <Link to="TV List">TV List</Link>
+        </li>
+        
         <li>
           <Link to="/">Browse</Link>
-        </li>
-        <li>
-          <Link to="/watchlist">Watchlist</Link>
-        </li>
-        <li>
-          <Link to="/profile">Profile</Link>
         </li>
         <li>
           <Link to="/login">Login</Link>

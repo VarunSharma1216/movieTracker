@@ -4,9 +4,10 @@
   "description": "A simple movie and TV show tracker.",
   "main": "index.js",
   "scripts": {
-    "start": "react-scripts start",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "start": "react-scripts start",
+  "build": "react-scripts build",
+  "test": "echo \"Error: no test specified\" && exit 1"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

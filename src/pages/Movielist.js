@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Button, message, Spin, Table, Divider, Input } from 'antd';
 import { Link } from 'react-router-dom';
 
-const Watchlist = () => {
+const Movielist = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [watchingMovies, setWatchingMovies] = useState([]);
   const [completedMovies, setCompletedMovies] = useState([]);
@@ -187,4 +187,4 @@ const Watchlist = () => {
   );
 };
 
-export default Watchlist;
+export default Movielist;
