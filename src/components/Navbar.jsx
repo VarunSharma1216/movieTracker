@@ -133,7 +133,7 @@ const Navbar = () => {
         </li>
         <li>
           {/* Link to the watchlist section on the current page */}
-          <Link to="TV List">TV List</Link>
+          <Link to="/profile#tvlist-section">TV List</Link>
         </li>
         
         <li>

@@ -4,12 +4,16 @@ import { Link } from 'react-router-dom';
 import { Layout, Menu, Avatar, Typography } from 'antd';
 import { HomeOutlined, UnorderedListOutlined, UserOutlined, SettingOutlined } from '@ant-design/icons'; 
 import Movielist from './Movielist';
+import TVlist from './TVlist';
 
 const { Content } = Layout;
 const { Title } = Typography;
 
+
 const Profile = () => {
   const location = useLocation();
+  const [display, setDisplay] = React.useState('');
+
 
   useEffect(() => {
     const handleScrollToHash = () => {
@@ -19,6 +23,14 @@ const Profile = () => {
         if (section) {
           section.scrollIntoView({ behavior: 'smooth' });
         }
+      }
+
+      if (location.hash === '#movielist-section') {
+        setDisplay('movielist');
+      } else if (location.hash === '#tvlist-section') {
+        setDisplay('tvlist');
+      } else {
+        setDisplay(''); // Default: show nothing or a placeholder
       }
     };
 
@@ -64,7 +76,7 @@ const Profile = () => {
     <Link to="/profile#movielist-section">Movie List</Link>
   </div>
   <div style={{ padding: '0 10px' }}>
-    <Link to="/profile#movielist-section">TV List</Link>
+    <Link to="/profile#tvlist-section">TV List</Link>
   </div>
   <div style={{ padding: '0 10px' }}>
     <Link to="/">Friends</Link>
@@ -82,9 +94,11 @@ const Profile = () => {
           backgroundColor: '#f4f4f9', 
         }}
       >
-        <div id="movielist-section">
-          <Movielist />
+        <div>
+        {display === 'movielist' && <Movielist />}
+        {display === 'tvlist' && <TVlist />}
         </div>
+       
       </Content>
     </Layout>
   );

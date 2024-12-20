@@ -3,7 +3,9 @@ import { auth, db } from '../firebase'; // Import Firebase functions
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Button, message, Spin, Table, Divider, Input } from 'antd';
+import { MinusCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
+
 
 const Movielist = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -58,6 +60,41 @@ const Movielist = () => {
     }
   }, [currentUser]);
 
+
+  const handleRemoveMovie = async (movieId, listName) => {
+    if (!currentUser) {
+      message.error('You must be logged in to remove a movie.');
+      return;
+    }
+  
+    try {
+      const userWatchlistRef = doc(db, 'watchlists', currentUser.uid);
+      const updatedList = {
+        watching: watchingMovies,
+        completed: completedMovies,
+        planned: plannedMovies,
+      };
+  
+      // Filter out the movie to be removed
+      updatedList[listName] = updatedList[listName].filter((movie) => movie.id !== movieId);
+  
+      // Save the updated list to Firebase
+      await updateDoc(userWatchlistRef, {
+        [listName]: updatedList[listName],
+      });
+  
+      // Update the state locally
+      if (listName === 'watching') setWatchingMovies(updatedList[listName]);
+      if (listName === 'completed') setCompletedMovies(updatedList[listName]);
+      if (listName === 'planned') setPlannedMovies(updatedList[listName]);
+  
+      message.success('Movie removed successfully!', 0.7);
+    } catch (error) {
+      message.error(`Error removing movie: ${error.message}`);
+    }
+  };
+  
+
   const updateRating = async (movieId, newRating, listName) => {
     if (!currentUser) {
       message.error('You must be logged in to update the rating.');
@@ -94,6 +131,8 @@ const Movielist = () => {
     }
   };
 
+  
+
   const columns = (listName) => [
     {
       title: 'Title',
@@ -102,21 +141,19 @@ const Movielist = () => {
       align: 'left',
       render: (text, record) => (
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          {/* Movie poster image */}
           {record.poster_path && (
             <img
-              src={`https://image.tmdb.org/t/p/w500${record.poster_path}`}  // Assuming using TMDb image API
+              src={`https://image.tmdb.org/t/p/w500${record.poster_path}`} // Assuming using TMDb image API
               alt={text}
               style={{
-                width: 40,  // Smaller width
-                height: 40,  // Smaller height
+                width: 40, // Smaller width
+                height: 40, // Smaller height
                 marginRight: 10,
-                objectFit: 'cover',  // Ensures the image is cropped to fit the dimensions
-                borderRadius: '4px',  // Optional: adds rounded corners
+                objectFit: 'cover', // Ensures the image is cropped to fit the dimensions
+                borderRadius: '4px', // Optional: adds rounded corners
               }}
             />
           )}
-          {/* Movie title link */}
           <Link to={`/movie/${record.id}`} style={{ textDecoration: 'none', color: '#1890ff' }}>
             {text}
           </Link>
@@ -127,6 +164,7 @@ const Movielist = () => {
       title: 'Rating',
       dataIndex: 'rating',
       key: 'rating',
+      width: 100,
       align: 'center',
       render: (rating, record) =>
         editingMovie === record.id ? (
@@ -146,7 +184,20 @@ const Movielist = () => {
           </span>
         ),
     },
+    {
+      key: 'action',
+      align: 'center',
+      width: 4,
+      render: (_, record) => (
+        <MinusCircleOutlined
+          style={{  cursor: 'pointer', color: 'red' }}
+          onClick={() => handleRemoveMovie(record.id, listName)}
+        />
+      ),
+    },
   ];
+  
+  
 
   if (loading) {
     return (
