@@ -11,6 +11,7 @@ import SignUp from './components/auth/SignUp';
 import AuthDetails from './components/AuthDetails';
 import TVlist from './pages/TVlist';
 import TVDetail from './pages/TVDetails';
+import Home from './pages/Home';
 
 const App = () => {
   return (
@@ -18,6 +19,7 @@ const App = () => {
       <Navbar />
       <Routes>
         <Route path="/" element={<Browse />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/movielist" element={<Movielist />} />
         <Route path="/tvlist" element={<TVlist />} />
         <Route path="/profile" element={<Profile />} />

@@ -125,7 +125,7 @@ const Navbar = () => {
 
       <ul className="navbar-links">
       <li>
-          <Link to="/profile">Profile</Link>
+          <Link to="/profile/">Profile</Link>
         </li>
       <li>
           {/* Link to the watchlist section on the current page */}

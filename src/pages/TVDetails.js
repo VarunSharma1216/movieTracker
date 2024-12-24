@@ -52,13 +52,17 @@ const TVDetail = () => {
       message.error('You must be logged in to add shows to your watchlist.');
       return;
     }
-
+  
     const { id, name, poster_path, first_air_date, vote_average, overview } = tvShow;
-
+  
     try {
       const watchlistRef = doc(db, 'tvwatchlist', user.uid);
       const watchlistSnapshot = await getDoc(watchlistRef);
-
+  
+      // Fetch total seasons and episodes
+      const totalSeasons = tvShow.number_of_seasons;
+      const totalEpisodes = tvShow.number_of_episodes;
+  
       // Remove the TV show from other lists
       if (watchlistSnapshot.exists()) {
         const watchlistData = watchlistSnapshot.data();
@@ -72,8 +76,8 @@ const TVDetail = () => {
           }
         }
       }
-
-      // Add to the target list
+  
+      // Add to the target list with additional fields
       await setDoc(
         watchlistRef,
         {
@@ -84,16 +88,22 @@ const TVDetail = () => {
             first_air_date,
             vote_average,
             overview,
+            currEpisode: 1, // Default starting episode
+            currSeason: 1,   // Default starting season
+            totalSeasons,   // Total seasons of the show
+            totalEpisodes,  // Total episodes of the show
           }),
         },
         { merge: true }
       );
-
-      message.success(`Added to ${targetList} list.`);
+  
+      message.success(`Added to ${targetList} list.`,0.7);
     } catch (error) {
       message.error(`Error updating watchlist: ${error.message}`);
     }
   };
+  
+  
 
   // Handle Dropdown selection
   const onClick = ({ key }) => {

@@ -70,7 +70,7 @@ const Profile = () => {
   }}
 >
   <div style={{ padding: '0 10px' }}>
-    <Link to="/">Home</Link>
+    <Link to="/home">Home</Link>
   </div>
   <div style={{ padding: '0 10px' }}>
     <Link to="/profile#movielist-section">Movie List</Link>

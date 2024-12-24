@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase'; // Import Firebase functions
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Button, message, Spin, Table, Divider, Input } from 'antd';
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {message, Spin, Table, Divider, Input } from 'antd';
+import { MinusOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -15,7 +15,6 @@ const TVlist = () => {
   const [plannedShows, setPlannedShows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [seasonsData, setSeasonsData] = useState({});
-  const [currSeason, setCurrSeason] = useState(1);
   const [episodesData, setEpisodesData] = useState({});
 
   const [editingShow, setEditingShow] = useState(null); // Tracks the show being edited
@@ -35,34 +34,28 @@ const TVlist = () => {
       message.error('You must be logged in to view your watchlist.');
       return;
     }
-  
+
     setLoading(true);
     try {
-      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
-      const userWatchlistDoc = await getDoc(userWatchlistRef);
-  
-      if (userWatchlistDoc.exists()) {
-        const { watching = [], completed = [], planned = [] } = userWatchlistDoc.data();
-        setWatchingShows(watching);
-        setCompletedShows(completed);
-        setPlannedShows(planned);
-  
-        // Cache total episodes and seasons for each show in Firebase
-        const updatedWatching = await Promise.all(
-          watching.map(async (show) => {
-            if (!show.totalEpisodes || !show.totalSeasons) {
-              const totalEpisodes = await fetchEpisodesCount(show.id);
-              const totalSeasons = await fetchSeasonsCount(show.id);
-  
-              return { ...show, totalEpisodes, totalSeasons };
-            }
-            return show;
-          })
-        );
-  
-        // Update Firebase with cached data
-        await updateDoc(userWatchlistRef, { watching: updatedWatching });
-        setWatchingShows(updatedWatching);
+      const watchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
+      const watchlistSnapshot = await getDoc(watchlistRef);
+
+      if (watchlistSnapshot.exists()) {
+        const watchlistData = watchlistSnapshot.data();
+        const updatedWatchlist = {};
+
+        for (const [listName, listShows] of Object.entries(watchlistData)) {
+          const updatedList = await Promise.all(
+            listShows.map(show => fetchShowDetails(show))
+          );
+          updatedWatchlist[listName] = updatedList;
+        }
+
+        await setDoc(watchlistRef, updatedWatchlist, { merge: true });
+
+        setWatchingShows(updatedWatchlist.watching || []);
+        setCompletedShows(updatedWatchlist.completed || []);
+        setPlannedShows(updatedWatchlist.planned || []);
       } else {
         setWatchingShows([]);
         setCompletedShows([]);
@@ -70,43 +63,14 @@ const TVlist = () => {
         message.info('Your watchlist is empty.');
       }
     } catch (error) {
+      console.error('Error fetching watchlist:', error);
       message.error(`Error fetching watchlist: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
-
-  const fetchSeasonsCount = async (showId) => {
-    try {
-      const apiKey = process.env.REACT_APP_TMDB_API_KEY;
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/tv/${showId}?api_key=${apiKey}`
-      );
-      return response.data.number_of_seasons;
-    } catch (error) {
-      console.error('Error fetching total seasons:', error);
-      return 1; // Default value if API fails
-    }
-  };
   
   
-  
-  const fetchEpisodesCount = async (showId) => {
-    try {
-      const apiKey = process.env.REACT_APP_TMDB_API_KEY;
-      const response = await axios.get(
-        `https://api.themoviedb.org/3/tv/${showId}?api_key=${apiKey}`
-      );
-      return response.data.number_of_episodes;
-    } catch (error) {
-      console.error('Error fetching total episodes:', error);
-      return 1; // Default value if API fails
-    }
-  };
-  
-  
-  
-
   useEffect(() => {
     if (currentUser) {
       fetchWatchlist();
@@ -165,77 +129,269 @@ const TVlist = () => {
     }
   };
 
-  const fetchEpisodes = async (showId) => {
+  const fetchEpisodesCount = async (showId, season) => {
     try {
       const apiKey = process.env.REACT_APP_TMDB_API_KEY;
       const response = await axios.get(
-        `https://api.themoviedb.org/3/tv/${showId}/season/${currSeason}?api_key=${apiKey}`
+        `https://api.themoviedb.org/3/tv/${showId}/season/${season}?api_key=${apiKey}`
       );
+      return response.data?.episodes?.length || 1;
+    } catch (error) {
+      console.error('Error fetching episodes:', error);
+      return 1;
+    }
+  };
+
+
+  const fetchShowDetails = async (show) => {
+    const apiKey = process.env.REACT_APP_TMDB_API_KEY;
+    try {
+      const showResponse = await axios.get(
+        `https://api.themoviedb.org/3/tv/${show.id}?api_key=${apiKey}`
+      );
+      const { number_of_seasons, vote_average } = showResponse.data;
+      
+      // Fetch episodes for current season
+      const episodeCount = await fetchEpisodesCount(show.id, show.currSeason || 1);
+      
+      // Update episodes data while preserving existing episode count
+      setEpisodesData(prev => ({
+        ...prev,
+        [show.id]: {
+          totalEpisodes: episodeCount,
+          currEpisode: show.currEpisode || prev[show.id]?.currEpisode || 1
+        }
+      }));
+
+      return {
+        ...show,
+        totalSeasons: number_of_seasons,
+        vote_average,
+        currEpisode: show.currEpisode || 1, // Ensure currEpisode is preserved
+        currSeason: show.currSeason || 1     // Ensure currSeason is preserved
+      };
+    } catch (error) {
+      console.error(`Failed to fetch data for show ID ${show.id}:`, error);
+      return show;
+    }
+  };
+
+
+  const incrementEpisode = async (showId, listName) => {
+    try {
+      if (!currentUser) {
+        message.error('You must be logged in to update episodes.');
+        return;
+      }
   
-      const numberOfEpisodes = response.data.episodes?.length ?? 1;
+      const showData = episodesData[showId];
+      if (!showData) {
+        message.error('Episode data not found');
+        return;
+      }
   
-      setEpisodesData((prev) => ({
+      const { currEpisode, totalEpisodes } = showData;
+      const show = listName === 'watching' ? 
+        watchingShows.find(s => s.id === showId) : 
+        completedShows.find(s => s.id === showId) || 
+        plannedShows.find(s => s.id === showId);
+  
+      if (!show) {
+        message.error('Show not found');
+        return;
+      }
+  
+      let newEpisode = currEpisode + 1;
+      let newSeason = show.currSeason || 1;
+      let shouldMoveToCompleted = false;
+  
+      // Check if we need to move to next season
+      if (newEpisode > totalEpisodes) {
+        // Fetch total number of seasons
+        const totalSeasons = seasonsData[showId] || 1;
+        
+        if (newSeason < totalSeasons) {
+          // Move to next season
+          newSeason++;
+          newEpisode = 1;
+          
+          // Fetch new season's episode count
+          const newTotalEpisodes = await fetchEpisodesCount(showId, newSeason);
+          setEpisodesData(prev => ({
+            ...prev,
+            [showId]: {
+              totalEpisodes: newTotalEpisodes,
+              currEpisode: newEpisode
+            }
+          }));
+        } else {
+          // All seasons completed
+          if (listName === 'watching') {
+            shouldMoveToCompleted = true;
+          } else {
+            message.info('All episodes completed!');
+            return;
+          }
+        }
+      }
+  
+      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
+  
+      if (shouldMoveToCompleted) {
+        // Move show from watching to completed
+        const updatedWatching = watchingShows.filter(s => s.id !== showId);
+        const showToMove = { ...show, currEpisode: newEpisode, currSeason: newSeason };
+        const updatedCompleted = [...completedShows, showToMove];
+  
+        await updateDoc(userWatchlistRef, {
+          watching: updatedWatching,
+          completed: updatedCompleted
+        });
+  
+        setWatchingShows(updatedWatching);
+        setCompletedShows(updatedCompleted);
+        message.success('Show completed and moved to completed list!', 1);
+      } else {
+        // Update episode and season count
+        const updatedList = listName === 'watching' ? 
+          watchingShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
+          listName === 'completed' ?
+          completedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
+          plannedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s);
+  
+        await updateDoc(userWatchlistRef, { [listName]: updatedList });
+  
+        // Update local state
+        if (listName === 'watching') setWatchingShows(updatedList);
+        else if (listName === 'completed') setCompletedShows(updatedList);
+        else setPlannedShows(updatedList);
+      }
+  
+      // Update episodes data state
+      setEpisodesData(prev => ({
         ...prev,
         [showId]: {
           ...prev[showId],
-          currEpisode: prev[showId]?.currEpisode || 1,
-          totalEpisodes: numberOfEpisodes,
-        },
+          currEpisode: newEpisode
+        }
       }));
+  
+      message.success('Progress updated!', 0.7);
     } catch (error) {
-      console.error('Error fetching number of episodes:', error);
-      setEpisodesData((prev) => ({
+      message.error(`Error updating progress: ${error.message}`);
+    }
+  };
+  
+  const decrementEpisode = async (showId, listName) => {
+    try {
+      if (!currentUser) {
+        message.error('You must be logged in to update episodes.');
+        return;
+      }
+  
+      const showData = episodesData[showId];
+      if (!showData) {
+        message.error('Episode data not found');
+        return;
+      }
+  
+      const { currEpisode } = showData;
+      const show = listName === 'watching' ? 
+        watchingShows.find(s => s.id === showId) : 
+        completedShows.find(s => s.id === showId) || 
+        plannedShows.find(s => s.id === showId);
+  
+      if (!show) {
+        message.error('Show not found');
+        return;
+      }
+  
+      let newEpisode = currEpisode - 1;
+      let newSeason = show.currSeason || 1;
+  
+      // Check if we need to move to previous season
+      if (newEpisode < 1 && newSeason > 1) {
+        newSeason--;
+        // Fetch previous season's episode count
+        const prevSeasonEpisodes = await fetchEpisodesCount(showId, newSeason);
+        newEpisode = prevSeasonEpisodes;
+        
+        setEpisodesData(prev => ({
+          ...prev,
+          [showId]: {
+            totalEpisodes: prevSeasonEpisodes,
+            currEpisode: newEpisode
+          }
+        }));
+      } else if (newEpisode < 1) {
+        message.info('Already at first episode!');
+        return;
+      }
+  
+      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
+      const updatedList = listName === 'watching' ? 
+        watchingShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
+        listName === 'completed' ?
+        completedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
+        plannedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s);
+  
+      await updateDoc(userWatchlistRef, { [listName]: updatedList });
+  
+      // Update local state
+      if (listName === 'watching') setWatchingShows(updatedList);
+      else if (listName === 'completed') setCompletedShows(updatedList);
+      else setPlannedShows(updatedList);
+  
+      // Update episodes data state
+      setEpisodesData(prev => ({
         ...prev,
         [showId]: {
-          currEpisode: prev[showId]?.currEpisode || 1,
-          totalEpisodes: prev[showId]?.totalEpisodes || 'Error',
-        },
+          ...prev[showId],
+          currEpisode: newEpisode
+        }
       }));
+  
+      message.success('Progress updated!', 0.7);
+    } catch (error) {
+      message.error(`Error updating progress: ${error.message}`);
+    }
+  };
+
+  
+  const handleRemoveShow = async (showId, listName) => {
+    if (!currentUser) {
+      message.error('You must be logged in to remove a show.');
+      return;
+    }
+  
+    try {
+      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
+      const updatedList = {
+        watching: watchingShows,
+        completed: completedShows,
+        planned: plannedShows,
+      };
+  
+      // Filter out the show to be removed
+      updatedList[listName] = updatedList[listName].filter((show) => show.id !== showId);
+  
+      // Save the updated list to Firebase
+      await updateDoc(userWatchlistRef, {
+        [listName]: updatedList[listName],
+      });
+  
+      // Update the state locally
+      if (listName === 'watching') setWatchingShows(updatedList[listName]);
+      if (listName === 'completed') setCompletedShows(updatedList[listName]);
+      if (listName === 'planned') setPlannedShows(updatedList[listName]);
+  
+      message.success('Show removed successfully!', 0.7);
+    } catch (error) {
+      message.error(`Error removing show: ${error.message}`);
     }
   };
   
 
-  const incrementEpisode = async (showId) => {
-    if (!currentUser) {
-      message.error('You must be logged in to update episodes.');
-      return;
-    }
-  
-    const currEpisode = episodesData[showId]?.currEpisode || 1;
-    const totalEpisodes = episodesData[showId]?.totalEpisodes || 1;
-  
-    if (currEpisode >= totalEpisodes) {
-      message.info('You have reached the last episode.');
-      return;
-    }
-  
-    const newEpisode = currEpisode + 1;
-  
-    setEpisodesData((prev) => ({
-      ...prev,
-      [showId]: {
-        ...prev[showId],
-        currEpisode: newEpisode,
-      },
-    }));
-  
-    try {
-      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
-      const updatedWatching = watchingShows.map((show) =>
-        show.id === showId
-          ? { ...show, currEpisode: newEpisode, currSeason: currSeason }
-          : show
-      );
-  
-      await updateDoc(userWatchlistRef, { watching: updatedWatching });
-  
-      setWatchingShows(updatedWatching);
-      message.success('Episode updated!', 0.7);
-    } catch (error) {
-      message.error(`Error updating episode: ${error.message}`);
-    }
-  };
-  
   
   
   
@@ -272,60 +428,58 @@ const TVlist = () => {
     },
     {
       title: 'Season',
-      key: 'action',
+      key: 'season',
       align: 'center',
       width: 4,
       render: (_, record) => {
         const showId = record.id;
-
-        // Check if data already fetched for this show
+  
+        // Trigger fetching seasons if not already fetched
         if (!seasonsData[showId]) {
-          fetchSeasons(showId); // Trigger the API request if data not already fetched
+          fetchSeasons(showId);
         }
-        const seasonsWatched = 1;
-
-
-
-
+  
+        // Return the seasons data if available
+        const seasonsWatched = record.currSeason || 1;
+        console.log(seasonsWatched);
+  
         return (
-          <span>{seasonsData[showId] ? `${seasonsWatched}/${seasonsData[showId]}` : 'Loading...'}</span>
+          <span>{seasonsData[showId] ? `${seasonsWatched}/${seasonsData[showId]}` : 'Loading seasons...'}</span>
         );
       },
     },
     {
-  title: 'Episode',
-  key: 'action',
-  align: 'center',
-  render: (_, record) => {
-    const showId = record.id;
-
-    if (!episodesData[showId]?.totalEpisodes) {
-      fetchEpisodes(showId);
-    }
-
-    const currEpisode = episodesData[showId]?.currEpisode || 1;
-    const totalEpisodes = episodesData[showId]?.totalEpisodes || 'Loading...';
-
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span>{`${currEpisode}/${totalEpisodes}`}</span>
-        <PlusOutlined
-          style={{ marginLeft: 10, cursor: 'pointer', fontSize: '12px' }}
-          onClick={() => incrementEpisode(showId)}
-        />
-      </div>
-    );
-  },
-},
-
+      title: 'Episode',
+      key: 'episode',
+      align: 'center',
+      width: 4,
+      render: (_, record) => {
+        const showData = episodesData[record.id];
+        if (!showData) {
+          return 'Loading...';
+        }
     
-    
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MinusOutlined
+              style={{ marginRight: 10, cursor: 'pointer', fontSize: '12px' }}
+              onClick={() => decrementEpisode(record.id, listName)}
+            />
+            <span>{`${showData.currEpisode}/${showData.totalEpisodes}`}</span>
+            <PlusOutlined
+              style={{ marginLeft: 10, cursor: 'pointer', fontSize: '12px' }}
+              onClick={() => incrementEpisode(record.id, listName)}
+            />
+          </div>
+        );
+      },
+    },
     
     {
       title: 'Rating',
       dataIndex: 'rating',
       key: 'rating',
-      width: 100,
+      width: 4,
       align: 'center',
       render: (rating, record) =>
         editingShow === record.id ? (
@@ -353,7 +507,7 @@ const TVlist = () => {
       render: (_, record) => (
         <MinusCircleOutlined
           style={{  cursor: 'pointer', color: 'red' }}
-          onClick={() => handleRemoveMovie(record.id, listName)}
+          onClick={() => handleRemoveShow(record.id, listName)}
         />
       ),
     },

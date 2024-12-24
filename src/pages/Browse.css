@@ -31,3 +31,272 @@
   height: auto;               /* Maintains aspect ratio */
   border-radius: 4px;
 }
+
+
+
+
+
+
+
+
+
+/*
+
+
+import React, { useState, useEffect } from 'react';
+import { Layout, Row, Col, Input, Select, Button, Card, Space, Typography, Tag } from 'antd';
+import { SearchOutlined, AppstoreOutlined, TableOutlined, UnorderedListOutlined, MenuOutlined } from '@ant-design/icons';
+import debounce from 'lodash/debounce';
+
+const { Content } = Layout;
+const { Text } = Typography;
+
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+
+const Browse = () => {
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    genre: 'Any',
+    year: 'Any',
+    season: 'Any',
+    format: 'Any'
+  });
+
+  const debouncedSearch = debounce(async (query) => {
+    if (!query) {
+      await fetchTrending();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${TMDB_BASE_URL}/search/multi?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(query)}`
+      );
+      const data = await response.json();
+      setResults(data.results.filter(item => item.media_type === 'movie' || item.media_type === 'tv'));
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+    setLoading(false);
+  }, 500);
+
+  const fetchTrending = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${TMDB_BASE_URL}/trending/all/week?api_key=${process.env.REACT_APP_TMDB_API_KEY}`
+      );
+      const data = await response.json();
+      setResults(data.results);
+    } catch (error) {
+      console.error('Fetch trending error:', error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTrending();
+  }, []);
+
+  useEffect(() => {
+    debouncedSearch(searchQuery);
+    return () => debouncedSearch.cancel();
+  }, [searchQuery]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleRemoveFilter = (key) => {
+    setFilters(prev => ({ ...prev, [key]: 'Any' }));
+  };
+
+  const handleRemoveSearch = () => {
+    setSearchQuery('');
+  };
+
+  return (
+    <Layout style={{ background: '#f5f5f5', minHeight: '100vh' }}>
+      <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Input
+              placeholder="Search"
+              prefix={<SearchOutlined />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%' }}
+              allowClear
+              loading={loading}
+            />
+          </Col>
+          
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Select
+              style={{ width: '100%' }}
+              value={filters.genre}
+              onChange={(value) => handleFilterChange('genre', value)}
+              placeholder="Genres"
+            >
+              <Select.Option value="Any">Any</Select.Option>
+              <Select.Option value="action">Action</Select.Option>
+              <Select.Option value="comedy">Comedy</Select.Option>
+              <Select.Option value="drama">Drama</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Select
+              style={{ width: '100%' }}
+              value={filters.year}
+              onChange={(value) => handleFilterChange('year', value)}
+              placeholder="Year"
+            >
+              <Select.Option value="Any">Any</Select.Option>
+              {Array.from({ length: 25 }, (_, i) => (
+                <Select.Option key={2024 - i} value={2024 - i}>
+                  {2024 - i}
+                </Select.Option>
+              ))}
+            </Select>
+          </Col>
+
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Select
+              style={{ width: '100%' }}
+              value={filters.season}
+              onChange={(value) => handleFilterChange('season', value)}
+              placeholder="Season"
+            >
+              <Select.Option value="Any">Any</Select.Option>
+              <Select.Option value="winter">Winter</Select.Option>
+              <Select.Option value="spring">Spring</Select.Option>
+              <Select.Option value="summer">Summer</Select.Option>
+              <Select.Option value="fall">Fall</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Select
+              style={{ width: '100%' }}
+              value={filters.format}
+              onChange={(value) => handleFilterChange('format', value)}
+              placeholder="Format"
+            >
+              <Select.Option value="Any">Any</Select.Option>
+              <Select.Option value="tv">TV</Select.Option>
+              <Select.Option value="movie">Movie</Select.Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} sm={8} md={6} lg={4}>
+            <Space>
+              <Button
+                type={viewMode === 'grid' ? 'primary' : 'default'}
+                icon={<AppstoreOutlined />}
+                onClick={() => setViewMode('grid')}
+              />
+              <Button
+                type={viewMode === 'compact' ? 'primary' : 'default'}
+                icon={<TableOutlined />}
+                onClick={() => setViewMode('compact')}
+              />
+              <Button
+                type={viewMode === 'list' ? 'primary' : 'default'}
+                icon={<UnorderedListOutlined />}
+                onClick={() => setViewMode('list')}
+              />
+              <Button
+                type={viewMode === 'menu' ? 'primary' : 'default'}
+                icon={<MenuOutlined />}
+                onClick={() => setViewMode('menu')}
+              />
+            </Space>
+          </Col>
+        </Row>
+
+        <Row style={{ marginTop: 16, marginBottom: 16 }}>
+          <Col span={24}>
+            <Space size={[8, 16]} wrap>
+              {searchQuery && (
+                <Tag closable onClose={handleRemoveSearch}>
+                  Search: {searchQuery}
+                </Tag>
+              )}
+              {Object.entries(filters).map(([key, value]) => (
+                value !== 'Any' && (
+                  <Tag 
+                    key={key} 
+                    closable 
+                    onClose={() => handleRemoveFilter(key)}
+                  >
+                    {key}: {value}
+                  </Tag>
+                )
+              ))}
+            </Space>
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 16]}>
+          {results.map((item) => (
+            <Col 
+              key={item.id}
+              xs={12}
+              sm={8}
+              md={viewMode === 'grid' ? 6 : viewMode === 'compact' ? 4 : 24}
+            >
+              <Card
+                hoverable
+                loading={loading}
+                cover={
+                  <div style={{ 
+                    paddingTop: '150%', 
+                    position: 'relative',
+                    background: '#f0f0f0',
+                    overflow: 'hidden'
+                  }}>
+                    <img
+                      alt={item.title || item.name}
+                      src={item.poster_path 
+                        ? `${POSTER_BASE_URL}${item.poster_path}`
+                        : '/api/placeholder/300/450'}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </div>
+                }
+                bodyStyle={{ padding: '12px' }}
+              >
+                <Card.Meta
+                  title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
+                  description={
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
+                    </Text>
+                  }
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Content>
+    </Layout>
+  );
+};
+
+export default Browse;
+
+
+*/ 
