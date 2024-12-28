@@ -48,7 +48,7 @@ const MovieDetail = () => {
         }
       };
 
-      await addDoc(collection(db, 'activities'), activityData);
+      await addDoc(collection(db, 'activities', user.uid, 'movie_activities'), activityData);
     } catch (error) {
       console.error('Error adding activity:', error);
     }

@@ -1,67 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import { Typography, AutoComplete } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
+import { auth, db } from '../firebase';
 
 const Navbar = () => {
   const [showSearch, setShowSearch] = useState(false); // State to control search bar visibility
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null); // Track the current user
   const navigate = useNavigate(); // React Router's navigation hook
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user); // Set the user in state
+    });
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, []);
 
-  // Toggle search visibility
   const toggleSearch = () => {
     setShowSearch((prevState) => !prevState);
   };
 
   const handleSearchChange = async (value) => {
     setSearchQuery(value);
-  
     if (value.trim().length > 0) {
       try {
         const [movieResponse, tvResponse] = await Promise.all([
           axios.get(`https://api.themoviedb.org/3/search/movie`, {
             params: {
-              api_key: process.env.REACT_APP_TMDB_API_KEY, // Use environment variable for API key
+              api_key: process.env.REACT_APP_TMDB_API_KEY,
               query: value,
             },
           }),
           axios.get(`https://api.themoviedb.org/3/search/tv`, {
             params: {
-              api_key: process.env.REACT_APP_TMDB_API_KEY, // Use environment variable for API key
+              api_key: process.env.REACT_APP_TMDB_API_KEY,
               query: value,
             },
           }),
         ]);
-  
+
         const movies = movieResponse?.data?.results || [];
         const tvShows = tvResponse?.data?.results || [];
-  
-        const formattedMovies = movies.map((movie) => ({
-          id: movie.id,
-          type: "movie",
-          title: movie.title,
-          date: movie.release_date,
-          popularity: movie.popularity,
-          poster_path: movie.poster_path, // Add poster_path
-        }));
-  
-        const formattedTvShows = tvShows.map((tv) => ({
-          id: tv.id,
-          type: "tv",
-          title: tv.name,
-          date: tv.first_air_date,
-          popularity: tv.popularity,
-          poster_path: tv.poster_path, // Add poster_path
-        }));
-  
-        const combinedResults = [...formattedMovies, ...formattedTvShows].sort(
-          (a, b) => b.popularity - a.popularity
-        );
-  
-        const options = combinedResults.map((item) => ({
+
+        const formattedResults = [...movies, ...tvShows].map((item) => ({
+          id: item.id,
+          type: item.title ? "movie" : "tv",
+          title: item.title || item.name,
+          date: item.release_date || item.first_air_date,
+          poster_path: item.poster_path,
+        })).sort((a, b) => b.popularity - a.popularity);
+
+        setSearchResults(formattedResults.map((item) => ({
           value: `${item.type}-${item.id}`,
           label: (
             <div style={{ display: "flex", alignItems: "center" }}>
@@ -69,22 +62,10 @@ const Navbar = () => {
                 <img
                   src={`https://image.tmdb.org/t/p/w92${item.poster_path}`}
                   alt={item.title}
-                  style={{
-                    marginRight: 10,
-                    height: "40px",
-                    width: "30px",
-                    objectFit: "cover",
-                  }}
+                  style={{ marginRight: 10, height: "40px", width: "30px", objectFit: "cover" }}
                 />
               ) : (
-                <div
-                  style={{
-                    width: "30px",
-                    height: "40px",
-                    marginRight: 10,
-                    backgroundColor: "#ddd",
-                  }}
-                />
+                <div style={{ width: "30px", height: "40px", marginRight: 10, backgroundColor: "#ddd" }} />
               )}
               <div>
                 <strong>{item.title}</strong>
@@ -94,9 +75,7 @@ const Navbar = () => {
               </div>
             </div>
           ),
-        }));
-  
-        setSearchResults(options);
+        })));
       } catch (error) {
         console.error("Error fetching search results:", error);
         setSearchResults([]);
@@ -107,12 +86,8 @@ const Navbar = () => {
   };
 
   const handleSelect = (value) => {
-    const [type, id] = value.split("-"); // Split the prefix and ID
-    if (type === "movie") {
-      navigate(`/movie/${id}`); // Navigate to the movie detail page
-    } else if (type === "tv") {
-      navigate(`/tv/${id}`); // Navigate to the TV show detail page
-    }
+    const [type, id] = value.split("-");
+    navigate(`/${type}/${id}`);
   };
 
   return (
@@ -124,24 +99,23 @@ const Navbar = () => {
       </div>
 
       <ul className="navbar-links">
-      <li>
-          <Link to="/profile/">Profile</Link>
+        <li>
+          <Link to="/profile#home-section">Profile</Link>
         </li>
-      <li>
-          {/* Link to the watchlist section on the current page */}
+        <li>
           <Link to="/profile#movielist-section">Movie List</Link>
         </li>
         <li>
-          {/* Link to the watchlist section on the current page */}
           <Link to="/profile#tvlist-section">TV List</Link>
         </li>
-        
         <li>
           <Link to="/">Browse</Link>
         </li>
-        <li>
-          <Link to="/login">Login</Link>
-        </li>
+        {!currentUser && ( // Conditionally render "Login" link
+          <li>
+            <Link to="/login">Login</Link>
+          </li>
+        )}
         <li>
           <SearchOutlined
             onClick={toggleSearch}
@@ -154,9 +128,9 @@ const Navbar = () => {
         <div className="search-bar">
           <AutoComplete
             style={{ width: 300, margin: "10px auto", display: "block" }}
-            options={searchResults} // Dropdown options
-            onSearch={handleSearchChange} // Called on input change
-            onSelect={handleSelect} // Called when an option is selected
+            options={searchResults}
+            onSearch={handleSearchChange}
+            onSelect={handleSelect}
             placeholder="Search for movies and TV shows..."
           />
         </div>

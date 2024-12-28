@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Row, Col, Input, Select, Button, Card, Space, Typography, Tag, Divider } from 'antd';
-import { SearchOutlined, AppstoreOutlined, TableOutlined, UnorderedListOutlined, MenuOutlined } from '@ant-design/icons';
+import { Layout, Row, Col, Input, Select, Button, Card, Space, Typography, Tag } from 'antd';
+import { SearchOutlined, AppstoreOutlined, TableOutlined } from '@ant-design/icons';
 import debounce from 'lodash/debounce';
 import { useNavigate } from 'react-router-dom';
 
 const { Content } = Layout;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
@@ -19,19 +19,28 @@ const Browse = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
     genre: 'Any',
-    year: 'Any',
+    sort: 'popularity.desc',
     format: 'Any'
   });
   const [genres, setGenres] = useState([]);
 
   const navigate = useNavigate();
 
+  const sortOptions = [
+    { value: 'popularity.desc', label: 'Most Popular' },
+    { value: 'top_rated', label: 'Top Rated' },
+    { value: 'vote_count.desc', label: 'Most Reviewed' },
+    { value: 'trending', label: 'Trending Now' },
+    { value: 'revenue.desc', label: 'Highest Grossing' },
+    { value: 'primary_release_date.desc', label: 'Recently Released' }
+  ];
+
   const handleSelect = (value) => {
-    const [type, id] = value.split("-"); // Split the prefix and ID
+    const [type, id] = value.split("-");
     if (type === "movie") {
-      navigate(`/movie/${id}`); // Navigate to the movie detail page
+      navigate(`/movie/${id}`);
     } else if (type === "tv") {
-      navigate(`/tv/${id}`); // Navigate to the TV show detail page
+      navigate(`/tv/${id}`);
     }
   };
 
@@ -58,44 +67,75 @@ const Browse = () => {
     try {
       let apiUrls = [];
       const genreFilter = filters.genre !== 'Any' ? `&with_genres=${filters.genre}` : '';
-      const yearFilter = filters.year !== 'Any' ? `&primary_release_year=${filters.year}` : '';
-      const tvYearFilter = filters.year !== 'Any' ? `&first_air_date_year=${filters.year}` : '';
       const pageParam = `&page=${page}`;
-
+      
       if (searchQuery) {
         if (filters.format === 'Any' || filters.format === 'movie') {
-          apiUrls.push(`${TMDB_BASE_URL}/search/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}${genreFilter}${yearFilter}${pageParam}`);
+          apiUrls.push(`${TMDB_BASE_URL}/search/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}${pageParam}`);
         }
         if (filters.format === 'Any' || filters.format === 'tv') {
-          apiUrls.push(`${TMDB_BASE_URL}/search/tv?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}${genreFilter}${tvYearFilter}${pageParam}`);
+          apiUrls.push(`${TMDB_BASE_URL}/search/tv?api_key=${process.env.REACT_APP_TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}${pageParam}`);
         }
       } else {
-        if (filters.format === 'Any' || filters.format === 'movie') {
-          apiUrls.push(`${TMDB_BASE_URL}/discover/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${yearFilter}${pageParam}&sort_by=popularity.desc`);
-        }
-        if (filters.format === 'Any' || filters.format === 'tv') {
-          apiUrls.push(`${TMDB_BASE_URL}/discover/tv?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${tvYearFilter}${pageParam}&sort_by=popularity.desc`);
+        // Handle different sort options
+        switch (filters.sort) {
+          case 'top_rated':
+            // Use discover endpoint instead of top_rated for better filter support
+            if (filters.format === 'Any' || filters.format === 'movie') {
+              apiUrls.push(`${TMDB_BASE_URL}/discover/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${pageParam}&sort_by=vote_average.desc&vote_count.gte=200&vote_average.gte=7`);
+            }
+            if (filters.format === 'Any' || filters.format === 'tv') {
+              apiUrls.push(`${TMDB_BASE_URL}/discover/tv?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${pageParam}&sort_by=vote_average.desc&vote_count.gte=200&vote_average.gte=7`);
+            }
+            break;
+            
+          case 'trending':
+            if (filters.format === 'Any' || filters.format === 'movie') {
+              // For trending, we'll need to filter post-fetch since trending endpoint doesn't support genre filter
+              apiUrls.push(`${TMDB_BASE_URL}/trending/movie/week?api_key=${process.env.REACT_APP_TMDB_API_KEY}${pageParam}`);
+            }
+            if (filters.format === 'Any' || filters.format === 'tv') {
+              apiUrls.push(`${TMDB_BASE_URL}/trending/tv/week?api_key=${process.env.REACT_APP_TMDB_API_KEY}${pageParam}`);
+            }
+            break;
+            
+          default:
+            const sortParam = `&sort_by=${filters.sort}`;
+            if (filters.format === 'Any' || filters.format === 'movie') {
+              apiUrls.push(`${TMDB_BASE_URL}/discover/movie?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${sortParam}${pageParam}`);
+            }
+            if (filters.format === 'Any' || filters.format === 'tv') {
+              apiUrls.push(`${TMDB_BASE_URL}/discover/tv?api_key=${process.env.REACT_APP_TMDB_API_KEY}${genreFilter}${sortParam}${pageParam}`);
+            }
         }
       }
-
+  
       const responses = await Promise.all(apiUrls.map(url => fetch(url)));
       const data = await Promise.all(responses.map(response => response.json()));
-
-      const formattedResults = data.flatMap(response => 
+  
+      let formattedResults = data.flatMap(response => 
         response.results.map(item => ({
           ...item,
-          media_type: item.first_air_date ? 'tv' : 'movie'
+          media_type: item.first_air_date ? 'tv' : 'movie',
+          vote_average: Math.round(item.vote_average * 10) / 10
         }))
       );
-
-      // Calculate max total pages from all responses
+  
+      // Apply genre filtering for trending content post-fetch if needed
+      if (filters.sort === 'trending' && filters.genre !== 'Any') {
+        formattedResults = formattedResults.filter(item => 
+          item.genre_ids && item.genre_ids.includes(parseInt(filters.genre))
+        );
+      }
+  
+      // Sort by vote average for top_rated content
+      if (filters.sort === 'top_rated') {
+        formattedResults.sort((a, b) => b.vote_average - a.vote_average);
+      }
+  
       const maxTotalPages = Math.max(...data.map(response => response.total_pages));
       setTotalPages(maxTotalPages);
-
-      // Sort by popularity
-      formattedResults.sort((a, b) => b.popularity - a.popularity);
-
-      // Either append to existing results or set new results
+  
       if (shouldAppend) {
         setResults(prevResults => [...prevResults, ...formattedResults]);
       } else {
@@ -141,118 +181,105 @@ const Browse = () => {
   };
 
   return (
-    <Layout style={{ background: '#f5f5f5', minHeight: '100vh' }}>
+    <Layout style={{ background: '#f4f4f9', minHeight: '100vh' }}>
       <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
-        <Row gutter={[16, 16]}>
-          {/* Title Section */}
-          
+      <Row gutter={[16, 16]}>
+  {/* Search */}
+  <Col xs={24} sm={12} md={4} lg={4}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Text strong>Search</Text>
+      <Input
+        placeholder="Search titles..."
+        prefix={<SearchOutlined />}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{ width: '100%' }}
+        allowClear
+        loading={loading}
+      />
+    </div>
+  </Col>
 
-          {/* Search and Filters */}
-          <Col xs={24} sm={8} md={6} lg={6}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Text strong>Search</Text>
-              <Input
-                placeholder="Search titles..."
-                prefix={<SearchOutlined />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: '100%' }}
-                allowClear
-                loading={loading}
-              />
-            </div>
-          </Col>
+  {/* Genre */}
+  <Col xs={24} sm={12} md={4} lg={4}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Text strong>Genre</Text>
+      <Select
+        style={{ width: '100%' }}
+        value={filters.genre}
+        onChange={(value) => handleFilterChange('genre', value)}
+        placeholder="Select genre"
+      >
+        <Select.Option value="Any">All Genres</Select.Option>
+        {genres.map((genre) => (
+          <Select.Option key={genre.id} value={genre.id.toString()}>
+            {genre.name}
+          </Select.Option>
+        ))}
+      </Select>
+    </div>
+  </Col>
 
-          <Col xs={24} sm={8} md={6} lg={6}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Text strong>Genre</Text>
-              <Select
-                style={{ width: '100%' }}
-                value={filters.genre}
-                onChange={(value) => handleFilterChange('genre', value)}
-                placeholder="Select genre"
-              >
-                <Select.Option value="Any">All Genres</Select.Option>
-                {genres.map((genre) => (
-                  <Select.Option key={genre.id} value={genre.id.toString()}>
-                    {genre.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
-          </Col>
+  {/* Sort By */}
+  <Col xs={24} sm={12} md={4} lg={4}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Text strong>Sort By</Text>
+      <Select
+        style={{ width: '100%' }}
+        value={filters.sort}
+        onChange={(value) => handleFilterChange('sort', value)}
+        placeholder="Select sorting"
+      >
+        {sortOptions.map((option) => (
+          <Select.Option key={option.value} value={option.value}>
+            {option.label}
+          </Select.Option>
+        ))}
+      </Select>
+    </div>
+  </Col>
 
-          <Col xs={24} sm={8} md={6} lg={6}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Text strong>Release Year</Text>
-              <Select
-                style={{ width: '100%' }}
-                value={filters.year}
-                onChange={(value) => handleFilterChange('year', value)}
-                placeholder="Select year"
-              >
-                <Select.Option value="Any">All Years</Select.Option>
-                {Array.from({ length: 25 }, (_, i) => (
-                  <Select.Option key={2024 - i} value={2024 - i}>
-                    {2024 - i}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
-          </Col>
+  {/* Content Type */}
+  <Col xs={24} sm={12} md={4} lg={4}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Text strong>Content Type</Text>
+      <Select
+        style={{ width: '100%' }}
+        value={filters.format}
+        onChange={(value) => handleFilterChange('format', value)}
+        placeholder="Select type"
+      >
+        <Select.Option value="Any">All Types</Select.Option>
+        <Select.Option value="movie">Movies</Select.Option>
+        <Select.Option value="tv">TV Shows</Select.Option>
+      </Select>
+    </div>
+  </Col>
 
-          <Col xs={24} sm={8} md={6} lg={6}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Text strong>Content Type</Text>
-              <Select
-                style={{ width: '100%' }}
-                value={filters.format}
-                onChange={(value) => handleFilterChange('format', value)}
-                placeholder="Select type"
-              >
-                <Select.Option value="Any">All Types</Select.Option>
-                <Select.Option value="movie">Movies</Select.Option>
-                <Select.Option value="tv">TV Shows</Select.Option>
-              </Select>
-            </div>
-          </Col>
+  {/* View Mode */}
+  <Col xs={24} sm={12} md={4} lg={4}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <Text strong>View Mode</Text>
+      <Space>
+        <Button
+          type={viewMode === 'grid' ? 'primary' : 'default'}
+          icon={<AppstoreOutlined />}
+          onClick={() => setViewMode('grid')}
+        >
+          Grid
+        </Button>
+        <Button
+          type={viewMode === 'compact' ? 'primary' : 'default'}
+          icon={<TableOutlined />}
+          onClick={() => setViewMode('compact')}
+        >
+          Compact
+        </Button>
+      </Space>
+    </div>
+  </Col>
+</Row>
 
-          <Col xs={24}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Text strong>View Mode</Text>
-              <Space>
-                <Button
-                  type={viewMode === 'grid' ? 'primary' : 'default'}
-                  icon={<AppstoreOutlined />}
-                  onClick={() => setViewMode('grid')}
-                >
-                  Grid
-                </Button>
-                <Button
-                  type={viewMode === 'compact' ? 'primary' : 'default'}
-                  icon={<TableOutlined />}
-                  onClick={() => setViewMode('compact')}
-                >
-                  Compact
-                </Button>
-                <Button
-                  type={viewMode === 'list' ? 'primary' : 'default'}
-                  icon={<UnorderedListOutlined />}
-                  onClick={() => setViewMode('list')}
-                >
-                  List
-                </Button>
-                <Button
-                  type={viewMode === 'menu' ? 'primary' : 'default'}
-                  icon={<MenuOutlined />}
-                  onClick={() => setViewMode('menu')}
-                >
-                  Menu
-                </Button>
-              </Space>
-            </div>
-          </Col>
-        </Row>
 
         {/* Active Filters */}
         <Row style={{ marginTop: 24, marginBottom: 24 }}>
@@ -270,20 +297,15 @@ const Browse = () => {
                     closable 
                     onClose={() => handleRemoveFilter(key)}
                   >
-                    {key}: {value}
+                    {key === 'sort' 
+                      ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}` 
+                      : `${key}: ${value}`}
                   </Tag>
                 )
               ))}
             </Space>
           </Col>
-        </Row>
-
-        {/* Results Count */}
-        <Row style={{ marginBottom: 16 }}>
-          <Col span={24}>
-            <Text>Showing {results.length} results</Text>
-          </Col>
-        </Row>
+        </Row>        
 
         {/* Content Grid */}
         <Row gutter={[16, 16]}>
@@ -324,13 +346,18 @@ const Browse = () => {
                 bodyStyle={{ padding: '12px' }}
               >
                 <Card.Meta
-                  title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
-                  description={
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
-                    </Text>
-                  }
-                />
+      title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
+      description={
+        <Space direction="vertical" size={0}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            ⭐ {item.vote_average} ({item.vote_count} votes)
+          </Text>
+        </Space>
+      }
+    />
               </Card>
             </Col>
           ))}

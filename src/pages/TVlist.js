@@ -16,6 +16,8 @@ const TVlist = () => {
   const [loading, setLoading] = useState(true);
   const [seasonsData, setSeasonsData] = useState({});
   const [episodesData, setEpisodesData] = useState({});
+  const [hoveredRow, setHoveredRow] = useState(null);
+
 
   const [editingShow, setEditingShow] = useState(null); // Tracks the show being edited
 
@@ -397,7 +399,7 @@ const TVlist = () => {
   
   
 
-  const columns = (listName) => [
+  const columns = (listName, hoveredRow) => [
     {
       title: 'Title',
       dataIndex: 'name',
@@ -460,20 +462,38 @@ const TVlist = () => {
         }
     
         return (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+            }}
+          >
             <MinusOutlined
-              style={{ marginRight: 10, cursor: 'pointer', fontSize: '12px' }}
+              style={{
+                marginRight: 10,
+                cursor: 'pointer',
+                fontSize: '12px',
+                visibility: hoveredRow === record.key ? 'visible' : 'hidden',
+              }}
               onClick={() => decrementEpisode(record.id, listName)}
             />
             <span>{`${showData.currEpisode}/${showData.totalEpisodes}`}</span>
             <PlusOutlined
-              style={{ marginLeft: 10, cursor: 'pointer', fontSize: '12px' }}
+              style={{
+                marginLeft: 10,
+                cursor: 'pointer',
+                fontSize: '12px',
+                visibility: hoveredRow === record.key ? 'visible' : 'hidden',
+              }}
               onClick={() => incrementEpisode(record.id, listName)}
             />
           </div>
         );
       },
     },
+    
     
     {
       title: 'Rating',
@@ -502,14 +522,15 @@ const TVlist = () => {
 
     {
       key: 'action',
+      width: 50,
       align: 'center',
-      width: 4,
-      render: (_, record) => (
-        <MinusCircleOutlined
-          style={{  cursor: 'pointer', color: 'red' }}
-          onClick={() => handleRemoveShow(record.id, listName)}
-        />
-      ),
+      render: (_, record) =>
+        hoveredRow === record.key ? (
+          <MinusCircleOutlined
+            style={{ cursor: 'pointer', color: 'red' }}
+            onClick={() => handleRemoveShow(record.id, listName)}
+          />
+        ) : null,
     },
   ];
 
@@ -527,25 +548,39 @@ const TVlist = () => {
 
   return (
     <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
+
       <Divider>Watching</Divider>
+
       <Table
-        dataSource={watchingShows.map((show) => ({ ...show, key: show.id }))}
-        columns={columns('watching')}
-        pagination={false}
-      />
+  dataSource={watchingShows.map((show) => ({ ...show, key: show.id }))}
+  columns={columns('watching', hoveredRow)}
+  pagination={false}
+  onRow={(record) => ({
+    onMouseEnter: () => setHoveredRow(record.key),
+    onMouseLeave: () => setHoveredRow(null),
+  })}
+/>
 
       <Divider>Completed</Divider>
       <Table
         dataSource={completedShows.map((show) => ({ ...show, key: show.id }))}
-        columns={columns('completed')}
+        columns={columns('completed', hoveredRow)}
         pagination={false}
+        onRow={(record) => ({
+          onMouseEnter: () => setHoveredRow(record.key),
+          onMouseLeave: () => setHoveredRow(null),
+        })}
       />
 
       <Divider>Planned</Divider>
       <Table
         dataSource={plannedShows.map((show) => ({ ...show, key: show.id }))}
-        columns={columns('planned')}
+        columns={columns('planned', hoveredRow)}
         pagination={false}
+        onRow={(record) => ({
+          onMouseEnter: () => setHoveredRow(record.key),
+          onMouseLeave: () => setHoveredRow(null),
+        })}
       />
     </div>
   );

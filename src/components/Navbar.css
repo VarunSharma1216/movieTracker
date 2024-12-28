@@ -22,7 +22,7 @@
   list-style-type: none; /* Removes bullet points */
   display: flex; /* Aligns links horizontally */
   gap: 1rem; /* Space between links */
-  margin: 0 auto; /* Centers the links */
+  margin: 0; /* Centers the links */
   flex-grow: 1; /* Allows the links section to take available space */
   justify-content: center; /* Center links in the available space */
 }

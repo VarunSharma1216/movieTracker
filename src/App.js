@@ -12,6 +12,8 @@ import AuthDetails from './components/AuthDetails';
 import TVlist from './pages/TVlist';
 import TVDetail from './pages/TVDetails';
 import Home from './pages/Home';
+import Friends from './pages/Friends';
+import Settings from './pages/Settings';
 
 const App = () => {
   return (
@@ -22,6 +24,8 @@ const App = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/movielist" element={<Movielist />} />
         <Route path="/tvlist" element={<TVlist />} />
+        <Route path="friends" element={<Friends />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/login" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />

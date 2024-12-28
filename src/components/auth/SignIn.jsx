@@ -77,9 +77,6 @@ const SignIn = () => {
           Don’t have an account? <Link to="/signup">Create one</Link>
         </Text>
         
-        <Text style={{ display: 'block', textAlign: 'center', marginTop: '1em' }}>
-          <Link to="/authdetails">Check Status</Link>
-        </Text>
       </Form>
     </div>
   );

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { message, Button, Dropdown, Card, Typography, Image, Spin, Alert, Row, Col } from 'antd';
-import { auth, db } from '../firebase'; // Ensure correct Firebase setup
-import { doc, getDoc, setDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { message, Button, Dropdown, Card, Space, Typography, Image, Spin, Alert, Row, Col, Tabs, Avatar, Tag, List, Divider } from 'antd';
+import { auth, db } from '../firebase';
+import { doc, getDoc, setDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { PlayCircleOutlined, DollarCircleOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
 const items = [
   { label: 'Watching', key: 'watching' },
@@ -15,12 +17,43 @@ const items = [
 
 const TVDetail = () => {
   const { tvId } = useParams();
+  const navigate = useNavigate();
   const [tvShow, setTVShow] = useState(null);
+  const [credits, setCredits] = useState(null);
+  const [streamingInfo, setStreamingInfo] = useState(null);
+  const [similar, setSimilar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [option, setOption] = useState('Click to Select an Option');
 
-  // Fetch the current TV show's status from the tvwatchlist
+  const addActivity = async (tvData, action) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const activityData = {
+        userId: user.uid,
+        type: 'tv',
+        mediaId: tvData.id,
+        title: tvData.name,
+        poster_path: tvData.poster_path,
+        action,
+        timestamp: serverTimestamp(),
+        details: {
+          first_air_date: tvData.first_air_date,
+          vote_average: tvData.vote_average,
+          genres: tvData.genres?.map(g => g.name) || [],
+          total_episodes: tvData.number_of_episodes,
+          total_seasons: tvData.number_of_seasons
+        }
+      };
+
+      await addDoc(collection(db, 'activities', user.uid, 'tv_activities'), activityData);
+    } catch (error) {
+      console.error('Error adding activity:', error);
+    }
+  };
+
   const fetchTVStatus = async (tvId) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -33,19 +66,26 @@ const TVDetail = () => {
         const watchlistData = watchlistSnapshot.data();
         for (const [listName, listShows] of Object.entries(watchlistData)) {
           if (listShows.some((item) => item.id === parseInt(tvId))) {
-            setOption(listName.charAt(0).toUpperCase() + listName.slice(1)); // Capitalize
+            setOption(listName.charAt(0).toUpperCase() + listName.slice(1));
             return;
           }
         }
       }
-
-      setOption('Click to Select an Option'); // Default
+      setOption('Click to Select an Option');
     } catch (error) {
       console.error('Error fetching TV status:', error);
     }
   };
 
-  // Add TV show to the tvwatchlist
+  const handleSelect = (value) => {
+    const [type, id] = value.split("-");
+    if (type === "movie") {
+      navigate(`/movie/${id}`);
+    } else if (type === "tv") {
+      navigate(`/tv/${id}`);
+    }
+  };
+
   const addToWatchlist = async (tvShow, targetList) => {
     const user = auth.currentUser;
     if (!user) {
@@ -53,21 +93,23 @@ const TVDetail = () => {
       return;
     }
   
-    const { id, name, poster_path, first_air_date, vote_average, overview } = tvShow;
+    const { id, name, poster_path, first_air_date, vote_average, overview, genres, seasons } = tvShow;
+  
+    // Calculate the number of episodes in the last season
+    const lastSeasonNumber = tvShow.number_of_seasons;
+    const lastSeason = tvShow.seasons?.find(season => season.season_number === lastSeasonNumber);
+    const lastSeasonEpisodes = lastSeason?.episode_count || 0;
   
     try {
       const watchlistRef = doc(db, 'tvwatchlist', user.uid);
       const watchlistSnapshot = await getDoc(watchlistRef);
+      let previousList = null;
   
-      // Fetch total seasons and episodes
-      const totalSeasons = tvShow.number_of_seasons;
-      const totalEpisodes = tvShow.number_of_episodes;
-  
-      // Remove the TV show from other lists
       if (watchlistSnapshot.exists()) {
         const watchlistData = watchlistSnapshot.data();
         for (const [listName, listShows] of Object.entries(watchlistData)) {
           if (listShows.some((item) => item.id === id)) {
+            previousList = listName;
             await setDoc(
               watchlistRef,
               { [listName]: arrayRemove(listShows.find((item) => item.id === id)) },
@@ -77,7 +119,10 @@ const TVDetail = () => {
         }
       }
   
-      // Add to the target list with additional fields
+      // Set current season and episode based on whether the show is completed
+      const currSeason = targetList === 'completed' ? tvShow.number_of_seasons : 1;
+      const currEpisode = targetList === 'completed' ? lastSeasonEpisodes : 1;
+  
       await setDoc(
         watchlistRef,
         {
@@ -88,41 +133,107 @@ const TVDetail = () => {
             first_air_date,
             vote_average,
             overview,
-            currEpisode: 1, // Default starting episode
-            currSeason: 1,   // Default starting season
-            totalSeasons,   // Total seasons of the show
-            totalEpisodes,  // Total episodes of the show
+            genres,
+            currEpisode,
+            currSeason,
+            totalSeasons: tvShow.number_of_seasons,
+            totalEpisodes: tvShow.number_of_episodes,
+            added_date: new Date().toISOString()
           }),
         },
         { merge: true }
       );
   
-      message.success(`Added to ${targetList} list.`,0.7);
+      let actionMessage;
+      switch (targetList) {
+        case 'watching':
+          actionMessage = previousList ? 'moved to watching' : 'started watching';
+          break;
+        case 'completed':
+          actionMessage = previousList ? 'marked as completed' : 'completed';
+          break;
+        case 'planned':
+          actionMessage = previousList ? 'moved to plan to watch' : 'added to plan to watch';
+          break;
+        default:
+          actionMessage = 'updated status';
+      }
+  
+      await addActivity(tvShow, actionMessage);
+  
     } catch (error) {
       message.error(`Error updating watchlist: ${error.message}`);
     }
   };
-  
-  
 
-  // Handle Dropdown selection
   const onClick = ({ key }) => {
     const selectedItem = items.find((item) => item.key === key);
     if (selectedItem) {
-      setOption(selectedItem.label); // Update button text
-      addToWatchlist(tvShow, key); // Add to Firebase
+      setOption(selectedItem.label);
+      message.success(`${tvShow.name} ${selectedItem.label.toLowerCase() === 'watching' ? 'added to Currently Watching' : 
+        selectedItem.label.toLowerCase() === 'planned' ? 'added to Plan to Watch' : 
+        'marked as Completed'}`, 0.7);
+
+      addToWatchlist(tvShow, selectedItem.label.toLowerCase());
     }
   };
 
+  const renderStreamingServices = () => {
+    const usProviders = streamingInfo?.results?.US;
+    if (!usProviders) return <Text>No streaming information available</Text>;
+
+    const renderProviderList = (providers, title) => {
+      if (!providers?.length) return null;
+      return (
+        <div style={{ marginBottom: '16px' }}>
+          <Text strong>{title}</Text>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+            {providers.map(provider => (
+              <Avatar
+                key={provider.provider_id}
+                src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                alt={provider.provider_name}
+                title={provider.provider_name}
+                size="large"
+              />
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <>
+        {renderProviderList(usProviders.flatrate, "Stream")}
+        {renderProviderList(usProviders.rent, "Rent")}
+        {renderProviderList(usProviders.buy, "Buy")}
+      </>
+    );
+  };
+
   useEffect(() => {
-    const fetchTVShow = async () => {
+    const fetchAllTVData = async () => {
       try {
         const apiKey = process.env.REACT_APP_TMDB_API_KEY;
-        const response = await axios.get(
-          `https://api.themoviedb.org/3/tv/${tvId}?api_key=${apiKey}`
-        );
-        setTVShow(response.data);
-        fetchTVStatus(tvId); // Fetch the status
+        
+        const [
+          tvResponse,
+          creditsResponse,
+          watchProvidersResponse,
+          similarResponse,
+        ] = await Promise.all([
+          axios.get(`https://api.themoviedb.org/3/tv/${tvId}?api_key=${apiKey}`),
+          axios.get(`https://api.themoviedb.org/3/tv/${tvId}/credits?api_key=${apiKey}`),
+          axios.get(`https://api.themoviedb.org/3/tv/${tvId}/watch/providers?api_key=${apiKey}`),
+          axios.get(`https://api.themoviedb.org/3/tv/${tvId}/similar?api_key=${apiKey}`),
+        ]);
+
+        setTVShow(tvResponse.data);
+        setCredits(creditsResponse.data);
+        setStreamingInfo(watchProvidersResponse.data);
+        setSimilar(similarResponse.data);
+
+        fetchTVStatus(tvId);
       } catch (error) {
         setError(error);
       } finally {
@@ -130,7 +241,7 @@ const TVDetail = () => {
       }
     };
 
-    fetchTVShow();
+    fetchAllTVData();
   }, [tvId]);
 
   if (loading) {
@@ -179,17 +290,119 @@ const TVDetail = () => {
           <Col xs={24} sm={14} md={16} lg={18}>
             <div style={{ padding: '20px' }}>
               <Title level={2}>{tvShow.name}</Title>
-              <Text type="secondary">First Air Date: {tvShow.first_air_date}</Text>
-              <br />
-              <Text strong>Rating: {tvShow.vote_average} / 10</Text>
+              
+              <Space size={[0, 8]} wrap>
+                <Tag icon={<CalendarOutlined />}>{tvShow.first_air_date}</Tag>
+                <Tag icon={<ClockCircleOutlined />}>{tvShow.episode_run_time?.[0] || 'N/A'} min</Tag>
+                <Tag icon={<PlayCircleOutlined />}>
+                  {tvShow.number_of_seasons} Seasons, {tvShow.number_of_episodes} Episodes
+                </Tag>
+                <Tag color="gold">{tvShow.vote_average.toFixed(1)} / 10</Tag>
+              </Space>
 
-              <div style={{ marginTop: '20px' }}>
-                <Title level={3}>Overview</Title>
-                <Text>{tvShow.overview}</Text>
-              </div>
+              {tvShow.genres?.map(genre => (
+                <Tag key={genre.id} style={{ margin: '8px 4px' }}>{genre.name}</Tag>
+              ))}
+
+              <Paragraph style={{ marginTop: '20px' }}>{tvShow.overview}</Paragraph>
             </div>
           </Col>
         </Row>
+      </Card>
+
+      <Card style={{ marginTop: '20px' }}>
+        <Tabs defaultActiveKey="cast">
+          <TabPane tab="Cast & Crew" key="cast">
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <Title level={4}>Top Cast</Title>
+                <Row gutter={[16, 16]}>
+                  {credits?.cast?.slice(0, 6).map(actor => (
+                    <Col xs={12} sm={8} md={6} lg={4} key={actor.id}>
+                      <Card
+                        hoverable
+                        cover={
+                          <img
+                            alt={actor.name}
+                            src={actor.profile_path 
+                              ? `https://image.tmdb.org/t/p/w300${actor.profile_path}`
+                              : '/api/placeholder/300/450'}
+                          />
+                        }
+                      >
+                        <Card.Meta
+                          title={actor.name}
+                          description={actor.character}
+                        />
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </Col>
+
+              <Col span={24} style={{ marginTop: '20px' }}>
+                <Title level={4}>Creators & Key Crew</Title>
+                <List
+                  grid={{ gutter: 16, column: 4 }}
+                  dataSource={[
+                    ...(tvShow.created_by || []),
+                    ...(credits?.crew?.filter(person => 
+                      ['Executive Producer', 'Producer', 'Writer'].includes(person.job)
+                    ) || [])
+                  ]}
+                  renderItem={person => (
+                    <List.Item>
+                      <Card>
+                        <Card.Meta
+                          avatar={
+                            <Avatar
+                              src={person.profile_path 
+                                ? `https://image.tmdb.org/t/p/w200${person.profile_path}`
+                                : null}
+                              size={64}
+                            />
+                          }
+                          title={person.name}
+                          description={person.job || 'Creator'}
+                        />
+                      </Card>
+                    </List.Item>
+                  )}
+                />
+              </Col>
+            </Row>
+          </TabPane>
+
+          <TabPane tab="Where to Watch" key="streaming">
+            <Title level={4}>Streaming Availability</Title>
+            {renderStreamingServices()}
+          </TabPane>
+
+          <TabPane tab="Similar Shows" key="similar">
+            <Title level={4}>You Might Also Like</Title>
+            <Row gutter={[16, 16]}>
+              {similar?.results?.slice(0, 6).map(show => (
+                <Col xs={12} sm={8} md={6} lg={4} key={show.id}>
+                  <Card
+                    hoverable
+                    onClick={() => handleSelect(`tv-${show.id}`)}
+                    cover={
+                      <img
+                        alt={show.name}
+                        src={`https://image.tmdb.org/t/p/w300${show.poster_path}`}
+                      />
+                    }
+                  >
+                    <Card.Meta
+                      title={show.name}
+                      description={`${show.vote_average.toFixed(1)} / 10`}
+                    />
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </TabPane>
+        </Tabs>
       </Card>
     </div>
   );
