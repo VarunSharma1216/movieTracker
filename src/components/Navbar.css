@@ -19,12 +19,21 @@
 
 
 .navbar-links {
-  list-style-type: none; /* Removes bullet points */
-  display: flex; /* Aligns links horizontally */
+  display: flex;
+  list-style: none;
+  padding: 0;
+  margin: 0;
   gap: 1rem; /* Space between links */
-  margin: 0; /* Centers the links */
   flex-grow: 1; /* Allows the links section to take available space */
   justify-content: center; /* Center links in the available space */
+}
+
+.navbar-item {
+  margin-right: 20px; /* Adjust the value as needed */
+}
+
+.navbar-item:last-child {
+  margin-right: 0; /* Remove margin from the last item */
 }
 
 .navbar-links li a {

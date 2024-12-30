@@ -311,12 +311,14 @@ const Browse = () => {
         <Row gutter={[16, 16]}>
           {results.map((item) => (
             <Col 
-              key={`${item.id}-${item.media_type}`}
+
+            key={`${item.id}-${item.media_type}`}
               xs={12}
               sm={8}
               md={viewMode === 'grid' ? 6 : viewMode === 'compact' ? 4 : 24}
             >
               <Card
+
                 hoverable
                 loading={loading}
                 onClick={() => handleSelect(`${item.media_type}-${item.id}`)}

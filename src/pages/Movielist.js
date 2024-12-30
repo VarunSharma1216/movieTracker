@@ -1,43 +1,73 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase'; // Import Firebase functions
+import { auth, db } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Button, message, Spin, Table, Divider, Input } from 'antd';
+import { doc, getDoc, updateDoc, getDocs, query, collection, where } from 'firebase/firestore';
+import { message, Spin, Table, Divider, Input } from 'antd';
 import { MinusCircleOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
-
+import { Link, useParams } from 'react-router-dom';
 
 const Movielist = () => {
+  const { username } = useParams();
   const [currentUser, setCurrentUser] = useState(null);
+  const [profileUserId, setProfileUserId] = useState(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [watchingMovies, setWatchingMovies] = useState([]);
   const [completedMovies, setCompletedMovies] = useState([]);
   const [plannedMovies, setPlannedMovies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingMovie, setEditingMovie] = useState(null); // Tracks the movie being edited
+  const [editingMovie, setEditingMovie] = useState(null);
 
+  // Check authentication status
   useEffect(() => {
-    // Listen for authentication state changes
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      setLoading(false); // Stop loading once the auth state is determined
     });
-
-    return () => unsubscribe(); // Cleanup listener
+    return () => unsubscribe();
   }, []);
 
+  // Fetch profile user ID from username
+  useEffect(() => {
+    const fetchProfileUserId = async () => {
+      if (!username) return;
+
+      try {
+        const usersQuery = query(
+          collection(db, "users"),
+          where("username", "==", username)
+        );
+        const querySnapshot = await getDocs(usersQuery);
+
+        if (querySnapshot.empty) {
+          message.error('User not found');
+          return;
+        }
+
+        const profileDoc = querySnapshot.docs[0];
+        setProfileUserId(profileDoc.id);
+
+        // Check if this is the current user's profile
+        if (currentUser && currentUser.uid === profileDoc.id) {
+          setIsOwnProfile(true);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        message.error('Error loading profile');
+      }
+    };
+
+    fetchProfileUserId();
+  }, [username, currentUser]);
+
   const fetchWatchlist = async () => {
-    if (!currentUser) {
-      message.error('You must be logged in to view your watchlist.');
-      return;
-    }
+    if (!profileUserId) return;
 
     setLoading(true);
     try {
-      const userWatchlistRef = doc(db, 'watchlists', currentUser.uid);
-      const userWatchlistDoc = await getDoc(userWatchlistRef);
+      const watchlistRef = doc(db, 'watchlists', profileUserId);
+      const watchlistSnapshot = await getDoc(watchlistRef);
 
-      if (userWatchlistDoc.exists()) {
-        const { watching = [], completed = [], planned = [] } = userWatchlistDoc.data();
+      if (watchlistSnapshot.exists()) {
+        const { watching = [], completed = [], planned = [] } = watchlistSnapshot.data();
         setWatchingMovies(watching);
         setCompletedMovies(completed);
         setPlannedMovies(planned);
@@ -45,9 +75,12 @@ const Movielist = () => {
         setWatchingMovies([]);
         setCompletedMovies([]);
         setPlannedMovies([]);
-        message.info('Your watchlist is empty.');
+        if (isOwnProfile) {
+          message.info('Your watchlist is empty.');
+        }
       }
     } catch (error) {
+      console.error('Error fetching watchlist:', error);
       message.error(`Error fetching watchlist: ${error.message}`);
     } finally {
       setLoading(false);
@@ -55,18 +88,22 @@ const Movielist = () => {
   };
 
   useEffect(() => {
-    if (currentUser) {
+    if (profileUserId) {
       fetchWatchlist();
     }
-  }, [currentUser]);
-
+  }, [profileUserId]);
 
   const handleRemoveMovie = async (movieId, listName) => {
+    if (!isOwnProfile) {
+      message.error("You can only remove movies from your own profile");
+      return;
+    }
+
     if (!currentUser) {
       message.error('You must be logged in to remove a movie.');
       return;
     }
-  
+
     try {
       const userWatchlistRef = doc(db, 'watchlists', currentUser.uid);
       const updatedList = {
@@ -74,28 +111,32 @@ const Movielist = () => {
         completed: completedMovies,
         planned: plannedMovies,
       };
-  
+
       // Filter out the movie to be removed
       updatedList[listName] = updatedList[listName].filter((movie) => movie.id !== movieId);
-  
+
       // Save the updated list to Firebase
       await updateDoc(userWatchlistRef, {
         [listName]: updatedList[listName],
       });
-  
+
       // Update the state locally
       if (listName === 'watching') setWatchingMovies(updatedList[listName]);
       if (listName === 'completed') setCompletedMovies(updatedList[listName]);
       if (listName === 'planned') setPlannedMovies(updatedList[listName]);
-  
-      message.success('Movie removed successfully!', 0.7);
+
+      message.success('Movie removed!', 0.7);
     } catch (error) {
       message.error(`Error removing movie: ${error.message}`);
     }
   };
-  
 
   const updateRating = async (movieId, newRating, listName) => {
+    if (!isOwnProfile) {
+      message.error("You can only update ratings on your own profile");
+      return;
+    }
+
     if (!currentUser) {
       message.error('You must be logged in to update the rating.');
       return;
@@ -131,8 +172,6 @@ const Movielist = () => {
     }
   };
 
-  
-
   const columns = (listName) => [
     {
       title: 'Title',
@@ -143,14 +182,14 @@ const Movielist = () => {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {record.poster_path && (
             <img
-              src={`https://image.tmdb.org/t/p/w500${record.poster_path}`} // Assuming using TMDb image API
+              src={`https://image.tmdb.org/t/p/w500${record.poster_path}`}
               alt={text}
               style={{
-                width: 40, // Smaller width
-                height: 40, // Smaller height
+                width: 40,
+                height: 40,
                 marginRight: 10,
-                objectFit: 'cover', // Ensures the image is cropped to fit the dimensions
-                borderRadius: '4px', // Optional: adds rounded corners
+                objectFit: 'cover',
+                borderRadius: '4px',
               }}
             />
           )}
@@ -167,7 +206,7 @@ const Movielist = () => {
       width: 100,
       align: 'center',
       render: (rating, record) =>
-        editingMovie === record.id ? (
+        isOwnProfile && editingMovie === record.id ? (
           <Input
             style={{ width: 80 }}
             defaultValue={rating}
@@ -177,8 +216,8 @@ const Movielist = () => {
           />
         ) : (
           <span
-            style={{ cursor: 'pointer', color: 'black' }}
-            onClick={() => setEditingMovie(record.id)}
+            style={{ cursor: isOwnProfile ? 'pointer' : 'default', color: 'black' }}
+            onClick={() => isOwnProfile && setEditingMovie(record.id)}
           >
             {rating ? `${rating}/10` : 'N/A'}
           </span>
@@ -189,15 +228,15 @@ const Movielist = () => {
       align: 'center',
       width: 4,
       render: (_, record) => (
-        <MinusCircleOutlined
-          style={{  cursor: 'pointer', color: 'red' }}
-          onClick={() => handleRemoveMovie(record.id, listName)}
-        />
+        isOwnProfile && (
+          <MinusCircleOutlined
+            style={{ cursor: 'pointer', color: 'red' }}
+            onClick={() => handleRemoveMovie(record.id, listName)}
+          />
+        )
       ),
     },
   ];
-  
-  
 
   if (loading) {
     return (
@@ -207,13 +246,8 @@ const Movielist = () => {
     );
   }
 
-  if (!currentUser) {
-    return <div>You must be logged in to view your watchlist.</div>;
-  }
-
   return (
     <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
-      {/*<h2 style={{ textAlign: 'Left' }}>Your Watchlist</h2> */}
       <Divider>Watching</Divider>
       <Table
         dataSource={watchingMovies.map((movie) => ({ ...movie, key: movie.id }))}

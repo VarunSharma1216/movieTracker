@@ -5,19 +5,41 @@ import { Typography, AutoComplete } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { auth, db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const Navbar = () => {
-  const [showSearch, setShowSearch] = useState(false); // State to control search bar visibility
+  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null); // Track the current user
-  const navigate = useNavigate(); // React Router's navigation hook
+  const [currentUser, setCurrentUser] = useState(null);
+  const [username, setUsername] = useState("");
+  const navigate = useNavigate();
   
+  // Add loading state
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user); // Set the user in state
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnapshot = await getDoc(userRef);
+          
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.data();
+            console.log("Fetched username:", userData.username); // Debug log
+            setUsername(userData.username || '');
+          }
+        } catch (error) {
+          console.error("Error fetching username:", error);
+        }
+      } else {
+        setUsername("");
+      }
+      setLoading(false);
     });
-    return () => unsubscribe(); // Cleanup the listener on component unmount
+    return () => unsubscribe();
   }, []);
 
   const toggleSearch = () => {
@@ -90,6 +112,22 @@ const Navbar = () => {
     navigate(`/${type}/${id}`);
   };
 
+  const handleProfileClick = (e, section) => {
+    e.preventDefault();
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    if (username) {
+      navigate(`/${username}/profile${section}`);
+    }
+  };
+
+  // Don't render until we've checked auth status
+  if (loading) {
+    return null;
+  }
+
   return (
     <div className="navbar">
       <div className="navbar-logo">
@@ -99,23 +137,32 @@ const Navbar = () => {
       </div>
 
       <ul className="navbar-links">
-        <li>
-          <Link to="/profile#home-section">Profile</Link>
-        </li>
-        <li>
-          <Link to="/profile#movielist-section">Movie List</Link>
-        </li>
-        <li>
-          <Link to="/profile#tvlist-section">TV List</Link>
-        </li>
-        <li>
-          <Link to="/">Browse</Link>
-        </li>
-        {!currentUser && ( // Conditionally render "Login" link
+        {currentUser ? (
+          <>
+            <li>
+              <a href="#" onClick={(e) => handleProfileClick(e, "#home-section")}>
+                Profile
+              </a>
+            </li>
+            <li>
+              <a href="#" onClick={(e) => handleProfileClick(e, "#movielist-section")}>
+                Movie List
+              </a>
+            </li>
+            <li>
+              <a href="#" onClick={(e) => handleProfileClick(e, "#tvlist-section")}>
+                TV List
+              </a>
+            </li>
+          </>
+        ) : (
           <li>
             <Link to="/login">Login</Link>
           </li>
         )}
+        <li>
+          <Link to="/">Browse</Link>
+        </li>
         <li>
           <SearchOutlined
             onClick={toggleSearch}
