@@ -40,7 +40,7 @@ You can access the live website at [Movie Tracker](https://inner-tokenizer-35040
 ```sh
 git clone https://github.com/your-username/movie-tracker.git
 cd movie-tracker
-
+```
 Install dependencies:
 Create a .env file in the root directory and add your Firebase configuration:
 Start the development server:
