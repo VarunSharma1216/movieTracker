@@ -23,11 +23,6 @@ You can access the live website at [Movie Tracker](https://inner-tokenizer-35040
 - Axios (HTTP requests)
 - React Router (Routing)
 
-## Project Structure
-. ├── .firebase/ ├── .github/ │ └── workflows/ ├── build/ ├── public/ ├── src/ │ ├── assets/ │ ├── components/ │ │ ├── auth/ │ │ ├── Navbar.css │ │ ├── Navbar.jsx │ ├── firebase.js │ ├── images/ │ ├── pages/ │ │ ├── Browse.css │ │ ├── Browse.js │ │ ├── MovieDetail.js │ │ ├── TVDetails.js │ │ ├── TVlist.js │ ├── services/ │ ├── App.js │ ├── index.css │ ├── index.js ├── .env ├── .firebaserc ├── .gitignore ├── firebase.json ├── package.json └── README.md
-
-## Getting Started
-
 ### Prerequisites
 
 - Node.js
