@@ -4,19 +4,20 @@
   padding: 0.3rem 2rem;
   background-color: #302c44;
   color: #fff;
+  flex-wrap: wrap;
 }
 
 .navbar-logo {
   font-size: 1.5rem; /* Size of the logo */
   display: flex;
   align-items: center; /* Center vertically */
+  white-space: nowrap; /* Prevents breaking into multiple lines */
 }
 
 .navbar-logo a {
   color: #fff; /* Sets link text color to white */
   text-decoration: none; /* Removes underline */
 }
-
 
 .navbar-links {
   display: flex;
@@ -26,6 +27,7 @@
   gap: 1rem; /* Space between links */
   flex-grow: 1; /* Allows the links section to take available space */
   justify-content: center; /* Center links in the available space */
+  flex-wrap: wrap;
 }
 
 .navbar-item {
@@ -50,4 +52,96 @@
 
 .avatar-icon {
   margin-right: 20px; /* Adjust this value to create more or less space */
+}
+
+.navbar-mobile-toggle {
+  display: none;
+  align-items: center;
+  order: -1; /* Place it before the logo */
+}
+
+.navbar-mobile-search {
+  display: none;
+  align-items: center;
+}
+
+.navbar-mobile-menu {
+  position: fixed;
+  top: 70px; /* Adjust based on navbar height */
+  left: 0;
+  right: 0;
+  background-color: #302c44;
+  border-top: 1px solid #4a4558;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-mobile-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar-mobile-links li {
+  border-bottom: 1px solid #4a4558;
+}
+
+.navbar-mobile-links li:last-child {
+  border-bottom: none;
+}
+
+.navbar-mobile-links li a {
+  display: block;
+  padding: 1rem;
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.navbar-mobile-links li a:hover {
+  background-color: #4a4558;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+  .navbar {
+    padding: 0.3rem 1rem;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .navbar-logo {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    flex-grow: 1;
+    text-align: center;
+  }
+  
+  .navbar-links-desktop {
+    display: none;
+  }
+  
+  .navbar-mobile-toggle {
+    display: flex;
+    margin-right: 10px;
+  }
+  
+  .navbar-mobile-search {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.3rem 0.5rem;
+  }
+  
+  .navbar-logo {
+    font-size: 1rem;
+  }
 }

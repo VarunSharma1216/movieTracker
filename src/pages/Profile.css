@@ -1,0 +1,73 @@
+/* Profile page responsive styles */
+
+.profile-header {
+  padding: 30px 20px !important;
+}
+
+.profile-nav-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.profile-nav-menu {
+  min-width: max-content;
+}
+
+.profile-nav-menu .ant-menu-item {
+  padding: 0 8px !important;
+  min-width: auto !important;
+  flex-shrink: 0;
+}
+
+.profile-nav-menu .ant-menu-item a {
+  font-size: 14px !important;
+  white-space: nowrap;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .profile-header {
+    padding: 30px 200px !important;
+  }
+  
+  .profile-nav-menu .ant-menu-item {
+    padding: 0 16px !important;
+  }
+  
+  .profile-nav-menu .ant-menu-item a {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 640px) {
+  .profile-header {
+    padding: 20px 15px !important;
+  }
+  
+  .profile-nav-container {
+    padding: 0 10px;
+  }
+  
+  .profile-nav-menu {
+    justify-content: flex-start !important;
+    gap: 2px !important;
+  }
+  
+  .profile-nav-menu .ant-menu-item {
+    padding: 0 6px !important;
+    font-size: 12px !important;
+  }
+  
+  .profile-nav-menu .ant-menu-item a {
+    font-size: 12px !important;
+    padding: 8px 4px !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 767px) {
+  .profile-header {
+    padding: 25px 40px !important;
+  }
+}

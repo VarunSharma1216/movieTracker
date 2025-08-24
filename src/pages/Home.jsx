@@ -223,9 +223,9 @@ const Home = () => {
 
   return (
     <PageTransition>
-      <div style={{ padding: 24 }}>
+      <div style={{ padding: 16 }}>
         <Row gutter={16} style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
-          <Col span={14}>
+          <Col xs={24} sm={24} md={14}>
             <SlideInLeft delay={0.1}>
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 {/* Movie Stats Overview */}
@@ -233,46 +233,66 @@ const Home = () => {
                   <Title level={3}>Movies</Title>
                 </FadeIn>
                 <StaggerContainer staggerDelay={0.1}>
-                  <Row gutter={16}>
-                    <Col span={6}>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.3}>
-                              <Statistic title="Total Movies" value={stats.movieTotal} />
+                              <Statistic 
+                                title="Total Movies" 
+                                value={stats.movieTotal} 
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.4}>
-                              <Statistic title="Watching" value={stats.movieWatching} />
+                              <Statistic 
+                                title="Watching" 
+                                value={stats.movieWatching}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.5}>
-                              <Statistic title="Completed" value={stats.movieCompleted} />
+                              <Statistic 
+                                title="Completed" 
+                                value={stats.movieCompleted}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.6}>
-                              <Statistic title="Hours Watched" value={Math.round(stats.movieHoursWatched)} />
+                              <Statistic 
+                                title="Hours Watched" 
+                                value={Math.round(stats.movieHoursWatched)}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
@@ -286,46 +306,66 @@ const Home = () => {
                   <Title level={3}>TV Shows</Title>
                 </FadeIn>
                 <StaggerContainer staggerDelay={0.1}>
-                  <Row gutter={16}>
-                    <Col span={6}>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.8}>
-                              <Statistic title="Total Shows" value={stats.tvTotal} />
+                              <Statistic 
+                                title="Total Shows" 
+                                value={stats.tvTotal}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={0.9}>
-                              <Statistic title="Watching" value={stats.tvWatching} />
+                              <Statistic 
+                                title="Watching" 
+                                value={stats.tvWatching}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={1.0}>
-                              <Statistic title="Completed" value={stats.tvCompleted} />
+                              <Statistic 
+                                title="Completed" 
+                                value={stats.tvCompleted}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
                       </StaggerItem>
                     </Col>
-                    <Col span={6}>
+                    <Col xs={12} sm={6} md={6}>
                       <StaggerItem>
                         <HoverLift scale={1.02}>
                           <Card>
                             <CountUp delay={1.1}>
-                              <Statistic title="Hours Watched" value={Math.round(stats.tvHoursWatched)} />
+                              <Statistic 
+                                title="Hours Watched" 
+                                value={Math.round(stats.tvHoursWatched)}
+                                valueStyle={{ fontSize: '16px' }}
+                                titleStyle={{ fontSize: '12px' }}
+                              />
                             </CountUp>
                           </Card>
                         </HoverLift>
@@ -336,7 +376,7 @@ const Home = () => {
               </Space>
             </SlideInLeft>
           </Col>
-          <Col span={10}>
+          <Col xs={24} sm={24} md={10}>
             <SlideInRight delay={0.3}>
               <HoverLift scale={1.01}>
                 <Card title="Recent Activities">
@@ -344,24 +384,40 @@ const Home = () => {
                     {recentActivities.map((activity) => (
                       <StaggerItem key={activity.id}>
                         <HoverLift scale={1.01} shadow={false}>
-                          <div style={{ display: 'flex', marginBottom: '16px' }}>
+                          <div style={{ display: 'flex', marginBottom: '16px', flexWrap: 'wrap' }}>
                             {activity.poster_path && (
                               <Avatar
                                 shape="square"
                                 size={64}
                                 src={`https://image.tmdb.org/t/p/w92${activity.poster_path}`}
                                 alt={activity.title}
+                                style={{ flexShrink: 0 }}
                               />
                             )}
-                            <div style={{ marginLeft: '16px', flex: 1 }}>
-                              <Title level={5}>
+                            <div style={{ 
+                              marginLeft: activity.poster_path ? '16px' : '0', 
+                              flex: 1, 
+                              minWidth: 0,
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}>
+                              <Title 
+                                level={5} 
+                                style={{ 
+                                  marginBottom: '4px',
+                                  fontSize: '14px',
+                                  lineHeight: '1.2'
+                                }}
+                              >
                                 <Link to={`/${activity.type}/${activity.mediaId}`}>
                                   {activity.title}
                                 </Link>
                               </Title>
-                              <Text>{activity.action}</Text>
+                              <Text style={{ fontSize: '12px' }}>{activity.action}</Text>
                               <div>
-                                <Text type="secondary">{formatTimeAgo(activity.timestamp)}</Text>
+                                <Text type="secondary" style={{ fontSize: '11px' }}>
+                                  {formatTimeAgo(activity.timestamp)}
+                                </Text>
                               </div>
                             </div>
                           </div>

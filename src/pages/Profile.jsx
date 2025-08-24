@@ -11,6 +11,7 @@ import TVlist from './TVlist';
 import Home from './Home';
 import Friends from './Friends';
 import Settings from './Settings';
+import './Profile.css';
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -139,14 +140,18 @@ const Profile = () => {
      <div
   style={{
     backgroundColor: '#302c44',
-    padding: '30px 200px',
+    padding: '30px 20px',
+    '@media (min-width: 768px)': {
+      padding: '30px 200px',
+    }
   }}
+  className="profile-header"
 >
   <div style={{
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'start',
-    width: 'fit-content'  // This ensures the container is only as wide as needed
+    alignItems: 'center',
+    width: '100%'
   }}>
     <Avatar
       size={100}
@@ -162,29 +167,42 @@ const Profile = () => {
         color: 'white',
         marginTop: '15px',
         margin: '15px 0 0 0',
-        alignSelf: 'center'  // This centers the title relative to the Avatar
+        textAlign: 'center'
       }}
     >
       {username}
     </Title>
   </div>
 </div>
-      <Menu
-        mode="horizontal"
-        defaultSelectedKeys={['3']}
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          borderBottom: '1px solid #f0f0f0',
-          gap: '20px',
-        }}
-      >
-        {menuItems.map(item => (
-          <Menu.Item key={item.key}>
-            <Link to={getMenuLink(item.key)}>{item.label}</Link>
-          </Menu.Item>
-        ))}
-      </Menu>
+      <div className="profile-nav-container">
+        <Menu
+          mode="horizontal"
+          defaultSelectedKeys={['3']}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            borderBottom: '1px solid #f0f0f0',
+            gap: '5px',
+            flexWrap: 'wrap',
+            minHeight: 'auto'
+          }}
+          className="profile-nav-menu"
+        >
+          {menuItems.map(item => (
+            <Menu.Item 
+              key={item.key}
+              style={{
+                padding: '0 8px',
+                minWidth: 'auto'
+              }}
+            >
+              <Link to={getMenuLink(item.key)} style={{ fontSize: '14px' }}>
+                {item.label}
+              </Link>
+            </Menu.Item>
+          ))}
+        </Menu>
+      </div>
       <Content
         style={{
           padding: '20px',

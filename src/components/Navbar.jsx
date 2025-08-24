@@ -2,15 +2,16 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import { Typography, AutoComplete } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { HoverLift, DropdownMenu, FadeIn } from './animations/AnimatedComponents';
 
 const Navbar = () => {
   const [showSearch, setShowSearch] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -46,6 +47,14 @@ const Navbar = () => {
 
   const toggleSearch = () => {
     setShowSearch((prevState) => !prevState);
+  };
+
+  const toggleMobileMenu = () => {
+    setShowMobileMenu((prevState) => !prevState);
+  };
+
+  const closeMobileMenu = () => {
+    setShowMobileMenu(false);
   };
 
   const handleSearchChange = async (value) => {
@@ -123,6 +132,7 @@ const Navbar = () => {
     if (username) {
       navigate(`/${username}/profile${section}`);
     }
+    closeMobileMenu(); // Close mobile menu when navigating
   };
 
   // Don't render until we've checked auth status
@@ -131,73 +141,113 @@ const Navbar = () => {
   }
 
   return (
-    <motion.div 
-      className="navbar"
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: [0.4, 0.0, 0.2, 1] }}
-    >
-      <div className="navbar-logo">
-        <HoverLift scale={1.02} shadow={false}>
-          <Typography.Title level={2} className="logo">
-            <Link to="/">MovieTracker</Link>
-          </Typography.Title>
-        </HoverLift>
-      </div>
+    <>
+      <motion.div 
+        className="navbar"
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.4, 0.0, 0.2, 1] }}
+      >
+        {/* Mobile Menu Toggle - Left side */}
+        <div className="navbar-mobile-toggle">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {showMobileMenu ? (
+              <CloseOutlined
+                onClick={toggleMobileMenu}
+                style={{ fontSize: "20px", cursor: "pointer" }}
+              />
+            ) : (
+              <MenuOutlined
+                onClick={toggleMobileMenu}
+                style={{ fontSize: "20px", cursor: "pointer" }}
+              />
+            )}
+          </motion.div>
+        </div>
 
-      <ul className="navbar-links">
-        {currentUser ? (
-          <>
+        <div className="navbar-logo">
+          <HoverLift scale={1.02} shadow={false}>
+            <Typography.Title level={2} className="logo">
+              <Link to="/">MovieTracker</Link>
+            </Typography.Title>
+          </HoverLift>
+        </div>
+
+        {/* Desktop Navigation */}
+        <ul className="navbar-links navbar-links-desktop">
+          {currentUser ? (
+            <>
+              <li>
+                <motion.a 
+                  href="#" 
+                  onClick={(e) => handleProfileClick(e, "#home-section")}
+                  whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Profile
+                </motion.a>
+              </li>
+              <li>
+                <motion.a 
+                  href="#" 
+                  onClick={(e) => handleProfileClick(e, "#movielist-section")}
+                  whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Movie List
+                </motion.a>
+              </li>
+              <li>
+                <motion.a 
+                  href="#" 
+                  onClick={(e) => handleProfileClick(e, "#tvlist-section")}
+                  whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  TV List
+                </motion.a>
+              </li>
+            </>
+          ) : (
             <li>
-              <motion.a 
-                href="#" 
-                onClick={(e) => handleProfileClick(e, "#home-section")}
+              <motion.div
                 whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                 whileTap={{ scale: 0.95 }}
               >
-                Profile
-              </motion.a>
+                <Link to="/login">Login</Link>
+              </motion.div>
             </li>
-            <li>
-              <motion.a 
-                href="#" 
-                onClick={(e) => handleProfileClick(e, "#movielist-section")}
-                whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Movie List
-              </motion.a>
-            </li>
-            <li>
-              <motion.a 
-                href="#" 
-                onClick={(e) => handleProfileClick(e, "#tvlist-section")}
-                whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-                whileTap={{ scale: 0.95 }}
-              >
-                TV List
-              </motion.a>
-            </li>
-          </>
-        ) : (
+          )}
           <li>
             <motion.div
               whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
               whileTap={{ scale: 0.95 }}
             >
-              <Link to="/login">Login</Link>
+              <Link to="/">Browse</Link>
             </motion.div>
           </li>
-        )}
-        <li>
-          <motion.div
-            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Link to="/">Browse</Link>
-          </motion.div>
-        </li>
-        <li>
+          <li>
+            <motion.div
+              whileHover={{ 
+                scale: 1.2, 
+                rotate: 10,
+                transition: { duration: 0.2 } 
+              }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <SearchOutlined
+                onClick={toggleSearch}
+                style={{ fontSize: "20px", cursor: "pointer" }}
+              />
+            </motion.div>
+          </li>
+        </ul>
+
+        {/* Mobile Search Icon - Right side */}
+        <div className="navbar-mobile-search">
           <motion.div
             whileHover={{ 
               scale: 1.2, 
@@ -211,8 +261,66 @@ const Navbar = () => {
               style={{ fontSize: "20px", cursor: "pointer" }}
             />
           </motion.div>
-        </li>
-      </ul>
+        </div>
+      </motion.div>
+
+      {/* Mobile Navigation Menu */}
+      <AnimatePresence>
+        {showMobileMenu && (
+          <motion.div 
+            className="navbar-mobile-menu"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ul className="navbar-mobile-links">
+              {currentUser ? (
+                <>
+                  <li>
+                    <motion.a 
+                      href="#" 
+                      onClick={(e) => handleProfileClick(e, "#home-section")}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Profile
+                    </motion.a>
+                  </li>
+                  <li>
+                    <motion.a 
+                      href="#" 
+                      onClick={(e) => handleProfileClick(e, "#movielist-section")}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Movie List
+                    </motion.a>
+                  </li>
+                  <li>
+                    <motion.a 
+                      href="#" 
+                      onClick={(e) => handleProfileClick(e, "#tvlist-section")}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      TV List
+                    </motion.a>
+                  </li>
+                </>
+              ) : (
+                <li>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Link to="/login" onClick={closeMobileMenu}>Login</Link>
+                  </motion.div>
+                </li>
+              )}
+              <li>
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  <Link to="/" onClick={closeMobileMenu}>Browse</Link>
+                </motion.div>
+              </li>
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <DropdownMenu isOpen={showSearch}>
         {showSearch && (
@@ -227,7 +335,7 @@ const Navbar = () => {
           </div>
         )}
       </DropdownMenu>
-    </motion.div>
+    </>
   );
 };
 
