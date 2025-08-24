@@ -616,7 +616,7 @@ const Browse = () => {
         {/* Content Grid */}
         {results.length > 0 && (
           <StaggerContainer staggerDelay={0.08}>
-            <Row gutter={[16, 16]}>
+            <Row gutter={[16, 16]} style={{ marginTop: 32 }}>
               {results.map((item) => (
                 <Col 
                   key={`${item.id}-${item.media_type}`}
