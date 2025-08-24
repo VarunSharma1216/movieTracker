@@ -120,15 +120,9 @@ const Browse = () => {
     { id: 9, name: 'Amazon Prime Video', value: '9' },
     { id: 15, name: 'Hulu', value: '15' },
     { id: 337, name: 'Disney Plus', value: '337' },
-    { id: 384, name: 'HBO Max', value: '384' },
-    { id: 350, name: 'Apple TV Plus', value: '350' },
-    { id: 531, name: 'Paramount Plus', value: '531' },
-    { id: 386, name: 'Peacock', value: '386' },
-    { id: 387, name: 'Crunchyroll', value: '387' },
-    { id: 283, name: 'Crackle', value: '283' },
-    { id: 257, name: 'Funimation', value: '257' },
-    { id: 26, name: 'Showtime', value: '26' },
-    { id: 43, name: 'Starz', value: '43' }
+    { id: 1899, name: 'Max (HBO Max)', value: '1899' },
+    { id: 531, name: 'Paramount+', value: '531' },
+    { id: 386, name: 'Peacock', value: '386' }
   ];
 
   const sortOptions = [
@@ -196,6 +190,7 @@ const Browse = () => {
     if (endpoint === 'discover' && filters.provider !== 'Any') {
       baseParams.append('with_watch_providers', filters.provider);
       baseParams.append('watch_region', 'US'); // Default to US region
+      console.log('Applied streaming provider filter:', filters.provider); // Debug log
     }
 
     return `${TMDB_BASE_URL}/${endpoint}/${contentType}?${baseParams.toString()}`;
