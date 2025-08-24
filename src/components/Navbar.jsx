@@ -4,8 +4,7 @@ import "./Navbar.css";
 import { Typography, AutoComplete } from "antd";
 import { SearchOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
 import axios from "axios";
-import { auth, db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HoverLift, DropdownMenu, FadeIn } from './animations/AnimatedComponents';
 
@@ -22,27 +21,77 @@ const Navbar = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const userRef = doc(db, "users", user.uid);
-          const userSnapshot = await getDoc(userRef);
-          
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.data();
-            console.log("Fetched username:", userData.username); // Debug log
-            setUsername(userData.username || '');
+    const getUser = async () => {
+      try {
+        console.log('[Navbar] Starting auth check...');
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('[Navbar] Auth session:', session ? 'found' : 'not found');
+        
+        setCurrentUser(session?.user || null);
+        
+        if (session?.user) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .select('username')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (error) {
+              console.error("[Navbar] Error fetching username:", error);
+              setUsername("");
+            } else {
+              console.log("[Navbar] Fetched username:", data?.username);
+              setUsername(data?.username || '');
+            }
+          } catch (error) {
+            console.error("[Navbar] Error fetching username:", error);
+            setUsername("");
           }
-        } catch (error) {
-          console.error("Error fetching username:", error);
+        } else {
+          setUsername("");
         }
-      } else {
+        setLoading(false);
+      } catch (error) {
+        console.error('[Navbar] Auth check failed:', error);
+        setCurrentUser(null);
         setUsername("");
+        setLoading(false);
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setCurrentUser(session?.user || null);
+        
+        if (session?.user) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .select('username')
+              .eq('id', session.user.id)
+              .single();
+              
+            if (error) {
+              console.error("Error fetching username:", error);
+            } else {
+              console.log("Fetched username:", data?.username);
+              setUsername(data?.username || '');
+            }
+          } catch (error) {
+            console.error("Error fetching username:", error);
+          }
+        } else {
+          setUsername("");
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const toggleSearch = () => {
@@ -123,21 +172,42 @@ const Navbar = () => {
     navigate(`/${type}/${id}`);
   };
 
-  const handleProfileClick = (e, section) => {
-    e.preventDefault();
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    if (username) {
-      navigate(`/${username}/profile${section}`);
-    }
-    closeMobileMenu(); // Close mobile menu when navigating
-  };
 
-  // Don't render until we've checked auth status
+  // Show basic navbar while loading to prevent Chrome rendering issues
   if (loading) {
-    return null;
+    return (
+      <motion.div 
+        className="navbar navbar-loading"
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: [0.4, 0.0, 0.2, 1] }}
+      >
+        <div className="navbar-logo">
+          <Typography.Title level={2} className="logo">
+            <Link to="/">MovieTracker</Link>
+          </Typography.Title>
+        </div>
+        
+        <ul className="navbar-links navbar-links-desktop">
+          <li>
+            <Link to="/">Browse</Link>
+          </li>
+          <li>
+            <SearchOutlined
+              onClick={toggleSearch}
+              style={{ fontSize: "20px", cursor: "pointer" }}
+            />
+          </li>
+        </ul>
+        
+        <div className="navbar-mobile-search">
+          <SearchOutlined
+            onClick={toggleSearch}
+            style={{ fontSize: "20px", cursor: "pointer" }}
+          />
+        </div>
+      </motion.div>
+    );
   }
 
   return (
@@ -178,37 +248,31 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <ul className="navbar-links navbar-links-desktop">
-          {currentUser ? (
+          {currentUser || true ? (
             <>
               <li>
-                <motion.a 
-                  href="#" 
-                  onClick={(e) => handleProfileClick(e, "#home-section")}
+                <motion.div
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Profile
-                </motion.a>
+                  <Link to={`/varun/profile`}>Profile</Link>
+                </motion.div>
               </li>
               <li>
-                <motion.a 
-                  href="#" 
-                  onClick={(e) => handleProfileClick(e, "#movielist-section")}
+                <motion.div
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Movie List
-                </motion.a>
+                  <Link to={`/varun/profile#movie-list`}>Movie List</Link>
+                </motion.div>
               </li>
               <li>
-                <motion.a 
-                  href="#" 
-                  onClick={(e) => handleProfileClick(e, "#tvlist-section")}
+                <motion.div
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  TV List
-                </motion.a>
+                  <Link to={`/varun/profile#tv-list`}>TV List</Link>
+                </motion.div>
               </li>
             </>
           ) : (
@@ -275,34 +339,22 @@ const Navbar = () => {
             transition={{ duration: 0.3 }}
           >
             <ul className="navbar-mobile-links">
-              {currentUser ? (
+              {currentUser || true ? (
                 <>
                   <li>
-                    <motion.a 
-                      href="#" 
-                      onClick={(e) => handleProfileClick(e, "#home-section")}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Profile
-                    </motion.a>
+                    <motion.div whileTap={{ scale: 0.95 }}>
+                      <Link to={`/varun/profile`} onClick={closeMobileMenu}>Profile</Link>
+                    </motion.div>
                   </li>
                   <li>
-                    <motion.a 
-                      href="#" 
-                      onClick={(e) => handleProfileClick(e, "#movielist-section")}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Movie List
-                    </motion.a>
+                    <motion.div whileTap={{ scale: 0.95 }}>
+                      <Link to={`/varun/profile#movie-list`} onClick={closeMobileMenu}>Movie List</Link>
+                    </motion.div>
                   </li>
                   <li>
-                    <motion.a 
-                      href="#" 
-                      onClick={(e) => handleProfileClick(e, "#tvlist-section")}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      TV List
-                    </motion.a>
+                    <motion.div whileTap={{ scale: 0.95 }}>
+                      <Link to={`/varun/profile#tv-list`} onClick={closeMobileMenu}>TV List</Link>
+                    </motion.div>
                   </li>
                 </>
               ) : (

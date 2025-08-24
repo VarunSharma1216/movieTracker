@@ -3,9 +3,7 @@ import { useLocation, useParams, Navigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { Layout, Menu, Avatar, Typography } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { doc, getDoc, getDocs, query, collection, where } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db } from '../firebase';
+import { supabase } from '../supabase';
 import Movielist from './Movielist';
 import TVlist from './TVlist';
 import Home from './Home';
@@ -32,27 +30,26 @@ const Profile = () => {
       if (!username) return;
 
       try {
-        const usersQuery = query(
-          collection(db, "users"),
-          where("username", "==", username)
-        );
-        const querySnapshot = await getDocs(usersQuery);
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, username')
+          .eq('username', username)
+          .single();
 
-
-        if (querySnapshot.empty) {
-          console.log("No profile found for username:", username);
+        if (error || !data) {
+          console.log("No profile found for username:", username, error);
           setIsValidProfile(false);
           setLoading(false);
           return;
         }
 
-        const profileDoc = querySnapshot.docs[0];
+        const profileDoc = data;
 
         setProfileUserId(profileDoc.id);
         setIsValidProfile(true);
 
         // Check if this is the current user's profile
-        if (currentUser && currentUser.uid === profileDoc.id) {
+        if (currentUser && currentUser.id === profileDoc.id) {
           setIsOwnProfile(true);
         }
       } catch (error) {
@@ -67,11 +64,20 @@ const Profile = () => {
 
   // Check authentication status
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-    });
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setCurrentUser(session?.user || null);
+    };
 
-    return () => unsubscribe();
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setCurrentUser(session?.user || null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -85,19 +91,19 @@ const Profile = () => {
       }
       
       switch (location.hash) {
-        case '#movielist-section':
+        case '#movie-list':
           setDisplay('movielist');
           break;
-        case '#tvlist-section':
+        case '#tv-list':
           setDisplay('tvlist');
           break;
-        case '#home-section':
+        case '#home':
           setDisplay('home');
           break;
-        case '#friends-section':
+        case '#friends':
           setDisplay('friends');
           break;
-        case '#settings-section':
+        case '#settings':
           setDisplay('settings');
           break;
         default:
@@ -123,7 +129,7 @@ const Profile = () => {
   }
 
   const getMenuLink = (section) => {
-    return `/${username}/profile#${section}-section`;
+    return `/${username}/profile#${section === 'movielist' ? 'movie-list' : section === 'tvlist' ? 'tv-list' : section}`;
   };
 
   // Only show Settings for own profile

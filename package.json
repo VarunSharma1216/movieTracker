@@ -13,10 +13,9 @@
   "license": "ISC",
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
+    "@supabase/supabase-js": "^2.56.0",
     "antd": "^5.21.6",
     "axios": "^1.7.7",
-    "firebase": "^10.0.0",
-    "firebaseui": "^6.1.0",
     "framer-motion": "^12.23.12",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",

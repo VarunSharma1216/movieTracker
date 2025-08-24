@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged, signOut} from 'firebase/auth'; // Corrected import
+import { supabase } from '../supabase';
 
 const AuthDetails = () => {
   const [authUser, setAuthUser] = useState(null);
 
   useEffect(() => {
-    const listen = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuthUser(user);
-      } else {
-        setAuthUser(null);
-      }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthUser(session?.user || null);
     });
-    return () => listen();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setAuthUser(session?.user || null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const userSignOut = () => {
-    signOut(auth).then(() => {
-        console.log('sign out succesful')
-    }).catch(error => console.log(error))
+  const userSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      console.log('sign out successful');
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (

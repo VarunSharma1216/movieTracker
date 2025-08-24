@@ -1,7 +1,5 @@
   import React, { useState, useEffect } from 'react';
-  import { auth, db } from '../firebase';
-  import { onAuthStateChanged } from 'firebase/auth';
-  import { doc, getDoc, setDoc, updateDoc, getDocs, query, collection, where } from 'firebase/firestore';
+  import { supabase } from '../supabase';
   import { message, Spin, Table, Divider, Input } from 'antd';
   import { MinusOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
   import { Link, useParams } from 'react-router-dom';
@@ -29,95 +27,55 @@
     const [hoveredRow, setHoveredRow] = useState(null);
     const [editingShow, setEditingShow] = useState(null);
 
-    // Check authentication status
+    // Simplified: Load auth and data quickly
     useEffect(() => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setCurrentUser(user);
-      });
-      return () => unsubscribe();
-    }, []);
-
-    // Fetch profile user ID from username
-    useEffect(() => {
-      const fetchProfileUserId = async () => {
-        if (!username) return;
-
+      const loadData = async () => {
+        setLoading(true);
+        
         try {
-          const usersQuery = query(
-            collection(db, "users"),
-            where("username", "==", username)
-          );
-          const querySnapshot = await getDocs(usersQuery);
-
-          if (querySnapshot.empty) {
-            message.error('User not found');
+          // Get current user session
+          const { data: { session } } = await supabase.auth.getSession();
+          const user = session?.user || null;
+          setCurrentUser(user);
+          
+          if (!user) {
+            setLoading(false);
             return;
           }
+          
+          // For TV list, always use current user
+          setProfileUserId(user.id);
+          setIsOwnProfile(true);
+          
+          // Fetch watchlist
+          const { data, error } = await supabase
+            .from('tvwatchlist')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
 
-          const profileDoc = querySnapshot.docs[0];
-          setProfileUserId(profileDoc.id);
-
-          // Check if this is the current user's profile
-          if (currentUser && currentUser.uid === profileDoc.id) {
-            setIsOwnProfile(true);
+          if (data) {
+            const { watching = [], completed = [], planned = [] } = data;
+            setWatchingShows(watching);
+            setCompletedShows(completed);
+            setPlannedShows(planned);
+          } else {
+            setWatchingShows([]);
+            setCompletedShows([]);
+            setPlannedShows([]);
           }
+          
         } catch (error) {
-          console.error("Error fetching profile:", error);
-          message.error('Error loading profile');
+          console.error('Error loading TV data:', error);
+        } finally {
+          setLoading(false);
         }
       };
+      
+      loadData();
+    }, []);
 
-      fetchProfileUserId();
-    }, [username, currentUser]);
 
-    const fetchWatchlist = async () => {
-      if (!profileUserId) return;
-
-      setLoading(true);
-      try {
-        const watchlistRef = doc(db, 'tvwatchlist', profileUserId);
-        const watchlistSnapshot = await getDoc(watchlistRef);
-
-        if (watchlistSnapshot.exists()) {
-          const watchlistData = watchlistSnapshot.data();
-          const updatedWatchlist = {};
-
-          for (const [listName, listShows] of Object.entries(watchlistData)) {
-            const updatedList = await Promise.all(
-              listShows.map(show => fetchShowDetails(show))
-            );
-            updatedWatchlist[listName] = updatedList;
-          }
-
-          // Only update Firebase if it's the user's own profile
-          if (isOwnProfile) {
-            await setDoc(watchlistRef, updatedWatchlist, { merge: true });
-          }
-
-          setWatchingShows(updatedWatchlist.watching || []);
-          setCompletedShows(updatedWatchlist.completed || []);
-          setPlannedShows(updatedWatchlist.planned || []);
-        } else {
-          setWatchingShows([]);
-          setCompletedShows([]);
-          setPlannedShows([]);
-          if (isOwnProfile) {
-            message.info('Your watchlist is empty.');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching watchlist:', error);
-        message.error(`Error fetching watchlist: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    useEffect(() => {
-      if (profileUserId) {
-        fetchWatchlist();
-      }
-    }, [profileUserId]);
 
     // Modify all interaction functions to check for isOwnProfile
     const updateRating = async (showId, newRating, listName) => {
@@ -132,7 +90,6 @@
       }
 
       try {
-        const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
         const updatedList = {
           watching: watchingShows,
           completed: completedShows,
@@ -144,10 +101,13 @@
           show.id === showId ? { ...show, rating: newRating } : show
         );
 
-        // Save the updated list to Firebase
-        await updateDoc(userWatchlistRef, {
-          [listName]: updatedList[listName],
-        });
+        // Save the updated list to Supabase
+        const { error } = await supabase
+          .from('tvwatchlist')
+          .update({ [listName]: updatedList[listName] })
+          .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
 
         // Update the state locally
         if (listName === 'watching') setWatchingShows(updatedList[listName]);
@@ -286,18 +246,21 @@
         }
       }
 
-      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
-
       if (shouldMoveToCompleted) {
         // Move show from watching to completed
         const updatedWatching = watchingShows.filter(s => s.id !== showId);
         const showToMove = { ...show, currEpisode: newEpisode, currSeason: newSeason };
         const updatedCompleted = [...completedShows, showToMove];
 
-        await updateDoc(userWatchlistRef, {
-          watching: updatedWatching,
-          completed: updatedCompleted
-        });
+        const { error } = await supabase
+          .from('tvwatchlist')
+          .update({
+            watching: updatedWatching,
+            completed: updatedCompleted
+          })
+          .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
 
         setWatchingShows(updatedWatching);
         setCompletedShows(updatedCompleted);
@@ -310,7 +273,12 @@
           completedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
           plannedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s);
 
-        await updateDoc(userWatchlistRef, { [listName]: updatedList });
+        const { error } = await supabase
+          .from('tvwatchlist')
+          .update({ [listName]: updatedList })
+          .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
 
         // Update local state
         if (listName === 'watching') setWatchingShows(updatedList);
@@ -377,8 +345,6 @@
         }));
       }
 
-      const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
-
       // Update episode and season count
       const updatedList = listName === 'watching' ? 
         watchingShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
@@ -386,7 +352,12 @@
         completedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s) :
         plannedShows.map(s => s.id === showId ? { ...s, currEpisode: newEpisode, currSeason: newSeason } : s);
 
-      await updateDoc(userWatchlistRef, { [listName]: updatedList });
+      const { error } = await supabase
+        .from('tvwatchlist')
+        .update({ [listName]: updatedList })
+        .eq('user_id', currentUser.id);
+      
+      if (error) throw error;
 
       // Update local state
       if (listName === 'watching') setWatchingShows(updatedList);
@@ -417,7 +388,6 @@
       }
 
       try {
-        const userWatchlistRef = doc(db, 'tvwatchlist', currentUser.uid);
         const updatedList = {
           watching: watchingShows,
           completed: completedShows,
@@ -427,10 +397,13 @@
         // Remove the show from the relevant list
         updatedList[listName] = updatedList[listName].filter((show) => show.id !== showId);
 
-        // Save the updated list to Firebase
-        await updateDoc(userWatchlistRef, {
-          [listName]: updatedList[listName],
-        });
+        // Save the updated list to Supabase
+        const { error } = await supabase
+          .from('tvwatchlist')
+          .update({ [listName]: updatedList[listName] })
+          .eq('user_id', currentUser.id);
+        
+        if (error) throw error;
 
         // Update the state locally
         if (listName === 'watching') setWatchingShows(updatedList[listName]);

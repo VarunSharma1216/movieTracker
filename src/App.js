@@ -25,11 +25,9 @@ const AnimatedRoutes = () => {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Browse />} />
         <Route path="/home" element={<Home />} />
-        <Route path="/movielist" element={<Movielist />} />
-        <Route path="/tvlist" element={<TVlist />} />
+        <Route path="/:username/profile" element={<Profile />} />
         <Route path="friends" element={<Friends />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="/:username/profile" element={<Profile />} />
         <Route path="/login" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/authdetails" element={<AuthDetails />} />

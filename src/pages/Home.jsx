@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  doc,
-  getDoc,
-  where,
-} from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { Card, Spin, Row, Col, Typography, Avatar, Space, Statistic, message } from 'antd';
 import { Link, useParams } from 'react-router-dom';
 import { 
@@ -48,10 +38,10 @@ const Home = () => {
 
   // Check authentication status
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setCurrentUser(user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setCurrentUser(session?.user || null);
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   // Fetch profile user ID from username
@@ -60,22 +50,21 @@ const Home = () => {
       if (!username) return;
 
       try {
-        const usersQuery = query(
-          collection(db, "users"),
-          where("username", "==", username)
-        );
-        const querySnapshot = await getDocs(usersQuery);
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('username', username)
+          .single();
 
-        if (querySnapshot.empty) {
+        if (error || !data) {
           message.error('User not found');
           return;
         }
 
-        const profileDoc = querySnapshot.docs[0];
-        setProfileUserId(profileDoc.id);
+        setProfileUserId(data.id);
 
         // Check if this is the current user's profile
-        if (currentUser && currentUser.uid === profileDoc.id) {
+        if (currentUser && currentUser.id === data.id) {
           setIsOwnProfile(true);
         }
       } catch (error) {
@@ -92,12 +81,18 @@ const Home = () => {
 
     try {
       // Fetch movie watchlist
-      const movieWatchlistRef = doc(db, 'watchlists', profileUserId);
-      const movieWatchlistDoc = await getDoc(movieWatchlistRef);
+      const { data: movieWatchlist } = await supabase
+        .from('moviewatchlist')
+        .select('*')
+        .eq('user_id', profileUserId)
+        .single();
 
       // Fetch TV watchlist
-      const tvWatchlistRef = doc(db, 'tvwatchlist', profileUserId);
-      const tvWatchlistDoc = await getDoc(tvWatchlistRef);
+      const { data: tvWatchlist } = await supabase
+        .from('tvwatchlist')
+        .select('*')
+        .eq('user_id', profileUserId)
+        .single();
 
       let movieStats = {
         total: 0,
@@ -115,25 +110,23 @@ const Home = () => {
         hoursWatched: 0,
       };
 
-      if (movieWatchlistDoc.exists()) {
-        const movieData = movieWatchlistDoc.data();
+      if (movieWatchlist) {
         movieStats = {
-          total: (movieData.watching?.length || 0) + (movieData.completed?.length || 0) + (movieData.planned?.length || 0),
-          watching: movieData.watching?.length || 0,
-          completed: movieData.completed?.length || 0,
-          planned: movieData.planned?.length || 0,
-          hoursWatched: calculateMovieWatchTime(movieData.completed || []),
+          total: (movieWatchlist.watching?.length || 0) + (movieWatchlist.completed?.length || 0) + (movieWatchlist.planned?.length || 0),
+          watching: movieWatchlist.watching?.length || 0,
+          completed: movieWatchlist.completed?.length || 0,
+          planned: movieWatchlist.planned?.length || 0,
+          hoursWatched: calculateMovieWatchTime(movieWatchlist.completed || []),
         };
       }
 
-      if (tvWatchlistDoc.exists()) {
-        const tvData = tvWatchlistDoc.data();
+      if (tvWatchlist) {
         tvStats = {
-          total: (tvData.watching?.length || 0) + (tvData.completed?.length || 0) + (tvData.planned?.length || 0),
-          watching: tvData.watching?.length || 0,
-          completed: tvData.completed?.length || 0,
-          planned: tvData.planned?.length || 0,
-          hoursWatched: calculateTVWatchTime(tvData.completed || []),
+          total: (tvWatchlist.watching?.length || 0) + (tvWatchlist.completed?.length || 0) + (tvWatchlist.planned?.length || 0),
+          watching: tvWatchlist.watching?.length || 0,
+          completed: tvWatchlist.completed?.length || 0,
+          planned: tvWatchlist.planned?.length || 0,
+          hoursWatched: calculateTVWatchTime(tvWatchlist.completed || []),
         };
       }
 
@@ -151,24 +144,29 @@ const Home = () => {
       });
 
       // Fetch recent activities
-      const movieActivitiesRef = collection(db, 'activities', profileUserId, 'movie_activities');
-      const tvActivitiesRef = collection(db, 'activities', profileUserId, 'tv_activities');
+      const [movieActivitiesData, tvActivitiesData] = await Promise.all([
+        supabase
+          .from('movie_activities')
+          .select('*')
+          .eq('user_id', profileUserId)
+          .order('timestamp', { ascending: false })
+          .limit(10),
+        supabase
+          .from('tv_activities')
+          .select('*')
+          .eq('user_id', profileUserId)
+          .order('timestamp', { ascending: false })
+          .limit(10)
+      ]);
 
-      const movieQuery = query(movieActivitiesRef, orderBy('timestamp', 'desc'), limit(10));
-      const tvQuery = query(tvActivitiesRef, orderBy('timestamp', 'desc'), limit(10));
-
-      const [movieSnapshot, tvSnapshot] = await Promise.all([getDocs(movieQuery), getDocs(tvQuery)]);
-
-      const movieActivities = movieSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate(),
+      const movieActivities = (movieActivitiesData.data || []).map((activity) => ({
+        ...activity,
+        timestamp: new Date(activity.timestamp),
       }));
 
-      const tvActivities = tvSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate(),
+      const tvActivities = (tvActivitiesData.data || []).map((activity) => ({
+        ...activity,
+        timestamp: new Date(activity.timestamp),
       }));
 
       const allActivities = [...movieActivities, ...tvActivities]

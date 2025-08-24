@@ -145,3 +145,39 @@
     font-size: 1rem;
   }
 }
+
+/* Browser compatibility and fallback styles */
+.navbar-loading {
+  /* Ensure navbar is visible even if animation fails */
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  visibility: visible !important;
+}
+
+/* Fallback for browsers with animation issues */
+@media (prefers-reduced-motion: reduce) {
+  .navbar {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Chrome-specific fixes */
+@supports (-webkit-appearance: none) {
+  .navbar {
+    /* Force hardware acceleration in Chrome */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}
+
+/* Ensure navbar is always visible as fallback */
+.navbar {
+  min-height: 60px; /* Reserve space */
+  position: relative;
+  z-index: 100;
+}

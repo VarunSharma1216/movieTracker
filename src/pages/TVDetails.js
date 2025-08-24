@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { message, Button, Dropdown, Card, Space, Typography, Image, Spin, Alert, Row, Col, Tabs, Avatar, Tag, List, Divider } from 'antd';
-import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { PlayCircleOutlined, DollarCircleOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -27,48 +26,51 @@ const TVDetail = () => {
   const [option, setOption] = useState('Click to Select an Option');
 
   const addActivity = async (tvData, action) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
       const activityData = {
-        userId: user.uid,
-        type: 'tv',
-        mediaId: tvData.id,
+        user_id: user.id,
+        mediaid: tvData.id,
         title: tvData.name,
         poster_path: tvData.poster_path,
         action,
-        timestamp: serverTimestamp(),
-        details: {
-          first_air_date: tvData.first_air_date,
-          vote_average: tvData.vote_average,
-          genres: tvData.genres?.map(g => g.name) || [],
-          total_episodes: tvData.number_of_episodes,
-          total_seasons: tvData.number_of_seasons
-        }
+        type: 'tv'
       };
 
-      await addDoc(collection(db, 'activities', user.uid, 'tv_activities'), activityData);
+      const { error } = await supabase
+        .from('tv_activities')
+        .insert(activityData);
+      
+      if (error) throw error;
     } catch (error) {
       console.error('Error adding activity:', error);
     }
   };
 
   const fetchTVStatus = async (tvId) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
-      const watchlistRef = doc(db, 'tvwatchlist', user.uid);
-      const watchlistSnapshot = await getDoc(watchlistRef);
+      const { data: watchlistData, error } = await supabase
+        .from('tvwatchlist')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-      if (watchlistSnapshot.exists()) {
-        const watchlistData = watchlistSnapshot.data();
-        for (const [listName, listShows] of Object.entries(watchlistData)) {
-          if (listShows.some((item) => item.id === parseInt(tvId))) {
-            setOption(listName.charAt(0).toUpperCase() + listName.slice(1));
-            return;
-          }
+      if (error || !watchlistData) {
+        setOption('Click to Select an Option');
+        return;
+      }
+
+      const lists = ['watching', 'completed', 'planned'];
+      for (const listName of lists) {
+        const listShows = watchlistData[listName] || [];
+        if (listShows.some((item) => item.id === parseInt(tvId))) {
+          setOption(listName.charAt(0).toUpperCase() + listName.slice(1));
+          return;
         }
       }
       setOption('Click to Select an Option');
@@ -87,7 +89,7 @@ const TVDetail = () => {
   };
 
   const addToWatchlist = async (tvShow, targetList) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       message.error('You must be logged in to add shows to your watchlist.');
       return;
@@ -101,20 +103,35 @@ const TVDetail = () => {
     const lastSeasonEpisodes = lastSeason?.episode_count || 0;
   
     try {
-      const watchlistRef = doc(db, 'tvwatchlist', user.uid);
-      const watchlistSnapshot = await getDoc(watchlistRef);
+      // Get current watchlist
+      const { data: currentWatchlist } = await supabase
+        .from('tvwatchlist')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      let watchlistData = {
+        watching: [],
+        completed: [],
+        planned: []
+      };
+      
       let previousList = null;
-  
-      if (watchlistSnapshot.exists()) {
-        const watchlistData = watchlistSnapshot.data();
+
+      if (currentWatchlist) {
+        watchlistData = {
+          watching: currentWatchlist.watching || [],
+          completed: currentWatchlist.completed || [],
+          planned: currentWatchlist.planned || []
+        };
+
+        // Check for the show in all lists and remove it
         for (const [listName, listShows] of Object.entries(watchlistData)) {
-          if (listShows.some((item) => item.id === id)) {
+          const showIndex = listShows.findIndex((item) => item.id === id);
+          if (showIndex !== -1) {
             previousList = listName;
-            await setDoc(
-              watchlistRef,
-              { [listName]: arrayRemove(listShows.find((item) => item.id === id)) },
-              { merge: true }
-            );
+            watchlistData[listName] = listShows.filter((item) => item.id !== id);
+            break;
           }
         }
       }
@@ -123,26 +140,35 @@ const TVDetail = () => {
       const currSeason = targetList === 'completed' ? tvShow.number_of_seasons : 1;
       const currEpisode = targetList === 'completed' ? lastSeasonEpisodes : 1;
   
-      await setDoc(
-        watchlistRef,
-        {
-          [targetList]: arrayUnion({
-            id,
-            name,
-            poster_path,
-            first_air_date,
-            vote_average,
-            overview,
-            genres,
-            currEpisode,
-            currSeason,
-            totalSeasons: tvShow.number_of_seasons,
-            totalEpisodes: tvShow.number_of_episodes,
-            added_date: new Date().toISOString()
-          }),
-        },
-        { merge: true }
-      );
+      // Add the show to the target list
+      const showData = {
+        id,
+        name,
+        poster_path,
+        first_air_date,
+        vote_average,
+        overview,
+        genres,
+        currEpisode,
+        currSeason,
+        totalSeasons: tvShow.number_of_seasons,
+        totalEpisodes: tvShow.number_of_episodes,
+        added_date: new Date().toISOString()
+      };
+      
+      watchlistData[targetList].push(showData);
+
+      // Update or insert the watchlist
+      const { error } = await supabase
+        .from('tvwatchlist')
+        .upsert({
+          user_id: user.id,
+          ...watchlistData
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
   
       let actionMessage;
       switch (targetList) {

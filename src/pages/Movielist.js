@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, getDocs, query, collection, where } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { message, Spin, Table, Divider, Input } from 'antd';
 import { MinusCircleOutlined } from '@ant-design/icons';
 import { Link, useParams } from 'react-router-dom';
@@ -26,81 +24,55 @@ const Movielist = () => {
   const [loading, setLoading] = useState(true);
   const [editingMovie, setEditingMovie] = useState(null);
 
-  // Check authentication status
+  // Simplified: Load auth and data quickly
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch profile user ID from username
-  useEffect(() => {
-    const fetchProfileUserId = async () => {
-      if (!username) return;
-
+    const loadData = async () => {
+      setLoading(true);
+      
       try {
-        const usersQuery = query(
-          collection(db, "users"),
-          where("username", "==", username)
-        );
-        const querySnapshot = await getDocs(usersQuery);
-
-        if (querySnapshot.empty) {
-          message.error('User not found');
+        // Get current user session
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user || null;
+        setCurrentUser(user);
+        
+        if (!user) {
+          setLoading(false);
           return;
         }
+        
+        // For movie list, always use current user
+        setProfileUserId(user.id);
+        setIsOwnProfile(true);
+        
+        // Fetch watchlist
+        const { data, error } = await supabase
+          .from('moviewatchlist')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
 
-        const profileDoc = querySnapshot.docs[0];
-        setProfileUserId(profileDoc.id);
-
-        // Check if this is the current user's profile
-        if (currentUser && currentUser.uid === profileDoc.id) {
-          setIsOwnProfile(true);
+        if (data) {
+          const { watching = [], completed = [], planned = [] } = data;
+          setWatchingMovies(watching);
+          setCompletedMovies(completed);
+          setPlannedMovies(planned);
+        } else {
+          setWatchingMovies([]);
+          setCompletedMovies([]);
+          setPlannedMovies([]);
         }
+        
       } catch (error) {
-        console.error("Error fetching profile:", error);
-        message.error('Error loading profile');
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
       }
     };
+    
+    loadData();
+  }, []);
 
-    fetchProfileUserId();
-  }, [username, currentUser]);
 
-  const fetchWatchlist = async () => {
-    if (!profileUserId) return;
-
-    setLoading(true);
-    try {
-      const watchlistRef = doc(db, 'watchlists', profileUserId);
-      const watchlistSnapshot = await getDoc(watchlistRef);
-
-      if (watchlistSnapshot.exists()) {
-        const { watching = [], completed = [], planned = [] } = watchlistSnapshot.data();
-        setWatchingMovies(watching);
-        setCompletedMovies(completed);
-        setPlannedMovies(planned);
-      } else {
-        setWatchingMovies([]);
-        setCompletedMovies([]);
-        setPlannedMovies([]);
-        if (isOwnProfile) {
-          message.info('Your watchlist is empty.');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching watchlist:', error);
-      message.error(`Error fetching watchlist: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (profileUserId) {
-      fetchWatchlist();
-    }
-  }, [profileUserId]);
 
   const handleRemoveMovie = async (movieId, listName) => {
     if (!isOwnProfile) {
@@ -114,7 +86,6 @@ const Movielist = () => {
     }
 
     try {
-      const userWatchlistRef = doc(db, 'watchlists', currentUser.uid);
       const updatedList = {
         watching: watchingMovies,
         completed: completedMovies,
@@ -124,10 +95,13 @@ const Movielist = () => {
       // Filter out the movie to be removed
       updatedList[listName] = updatedList[listName].filter((movie) => movie.id !== movieId);
 
-      // Save the updated list to Firebase
-      await updateDoc(userWatchlistRef, {
-        [listName]: updatedList[listName],
-      });
+      // Save the updated list to Supabase
+      const { error } = await supabase
+        .from('moviewatchlist')
+        .update({ [listName]: updatedList[listName] })
+        .eq('user_id', currentUser.id);
+      
+      if (error) throw error;
 
       // Update the state locally
       if (listName === 'watching') setWatchingMovies(updatedList[listName]);
@@ -152,7 +126,6 @@ const Movielist = () => {
     }
 
     try {
-      const userWatchlistRef = doc(db, 'watchlists', currentUser.uid);
       const updatedList = {
         watching: watchingMovies,
         completed: completedMovies,
@@ -164,10 +137,13 @@ const Movielist = () => {
         movie.id === movieId ? { ...movie, rating: newRating } : movie
       );
 
-      // Save the updated list to Firebase
-      await updateDoc(userWatchlistRef, {
-        [listName]: updatedList[listName],
-      });
+      // Save the updated list to Supabase
+      const { error } = await supabase
+        .from('moviewatchlist')
+        .update({ [listName]: updatedList[listName] })
+        .eq('user_id', currentUser.id);
+      
+      if (error) throw error;
 
       // Update the state locally
       if (listName === 'watching') setWatchingMovies(updatedList[listName]);

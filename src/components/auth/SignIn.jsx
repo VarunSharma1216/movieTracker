@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from "../../firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { supabase } from "../../supabase";
 import { Link } from 'react-router-dom';
 import { Form, Input, Button, Typography, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
@@ -15,11 +14,38 @@ const SignIn = () => {
 
   const handleSignIn = async () => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        message.error(`Error signing in: ${error.message}`);
+        return;
+      }
+
       message.success('Successfully signed in!');
       setLoggedIn(true);
-      console.log('Signed in:', userCredential);
-      navigate('/');
+      console.log('Signed in:', data.user);
+      
+      // Get username to redirect to correct profile
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (!userError && userData?.username) {
+          navigate(`/${userData.username}/profile`);
+        } else {
+          console.warn('Username not found, redirecting to home');
+          navigate('/');
+        }
+      } catch (userFetchError) {
+        console.error('Error fetching username:', userFetchError);
+        navigate('/');
+      }
     } catch (error) {
       message.error(`Error signing in: ${error.message}`);
     }

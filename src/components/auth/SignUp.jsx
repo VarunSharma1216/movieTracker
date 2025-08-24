@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { auth } from "../../firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { supabase } from "../../supabase";
 import { Form, Input, Button, Typography, message } from 'antd';
 
 const { Title } = Typography;
-const db = getFirestore();
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -23,17 +20,18 @@ const SignUp = () => {
     }
   
     try {
-      console.log('Creating reference to users collection');
-      const usersRef = collection(db, "users");
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username.toLowerCase())
+        .single();
   
-      console.log('Building query with username:', username.toLowerCase());
-      const q = query(usersRef, where("username", "==", username.toLowerCase()));
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error checking username:', error);
+        return false;
+      }
   
-      console.log('Executing query');
-      const querySnapshot = await getDocs(q);
-  
-      console.log('Query executed. Number of documents found:', querySnapshot.size);
-      return querySnapshot.size > 0;
+      return data !== null;
     } catch (error) {
       console.error('Error checking username:', error);
       return false;
@@ -57,15 +55,23 @@ const SignUp = () => {
         return;
       }
 
-      // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Store user data in Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        username: username.toLowerCase()
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: username.toLowerCase()
+          }
+        }
       });
 
-      message.success('Account created successfully!');
+      if (error) {
+        message.error(`Error signing up: ${error.message}`);
+        return;
+      }
+
+      message.success('Account created successfully! Please check your email to verify your account.');
       form.resetFields();
     } catch (error) {
       message.error(`Error signing up: ${error.message}`);

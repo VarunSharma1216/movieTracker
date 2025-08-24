@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { message, Button, Dropdown, Card, Space, Typography, Image, Spin, Alert, Row, Col, Tabs, Avatar, Tag, List, Divider } from 'antd';
-import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc, arrayUnion, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { PlayCircleOutlined, DollarCircleOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
 import { 
   PageTransition, 
@@ -27,6 +26,7 @@ const items = [
 
 const MovieDetail = () => {
   const { movieId } = useParams();
+  const navigate = useNavigate();
   const [movie, setMovie] = useState(null);
   const [credits, setCredits] = useState(null);
   const [streamingInfo, setStreamingInfo] = useState(null);
@@ -37,29 +37,27 @@ const MovieDetail = () => {
   const [option, setOption] = useState('Click to Select an Option');
   
 
-  // Function to fetch the movie's current status in Firebase
+  // Function to fetch the movie's current status in database
 
   const addActivity = async (movieData, action) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
       const activityData = {
-        userId: user.uid,
-        type: 'movie',
-        mediaId: movieData.id,
+        user_id: user.id,
+        mediaid: movieData.id,
         title: movieData.title,
         poster_path: movieData.poster_path,
         action,
-        timestamp: serverTimestamp(),
-        details: {
-          release_date: movieData.release_date,
-          vote_average: movieData.vote_average,
-          genres: movieData.genres?.map(g => g.name) || []
-        }
+        type: 'movie'
       };
 
-      await addDoc(collection(db, 'activities', user.uid, 'movie_activities'), activityData);
+      const { error } = await supabase
+        .from('movie_activities')
+        .insert(activityData);
+      
+      if (error) throw error;
     } catch (error) {
       console.error('Error adding activity:', error);
     }
@@ -67,26 +65,32 @@ const MovieDetail = () => {
 
 
   const fetchMovieStatus = async (movieId) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
-      const watchlistRef = doc(db, 'watchlists', user.uid);
-      const watchlistSnapshot = await getDoc(watchlistRef);
+      const { data: watchlistData, error } = await supabase
+        .from('moviewatchlist')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-      if (watchlistSnapshot.exists()) {
-        const watchlistData = watchlistSnapshot.data();
+      if (error || !watchlistData) {
+        setOption('Click to Select an Option');
+        return;
+      }
 
-        // Check each list to see where the movie exists
-        for (const [listName, listMovies] of Object.entries(watchlistData)) {
-          const movieExists = listMovies.some((item) => item.id === parseInt(movieId));
-          if (movieExists) {
-            setOption(listName.charAt(0).toUpperCase() + listName.slice(1)); // Capitalize the list name
-            return;
-          }
+      // Check each list to see where the movie exists
+      const lists = ['watching', 'completed', 'planned'];
+      for (const listName of lists) {
+        const listMovies = watchlistData[listName] || [];
+        const movieExists = listMovies.some((item) => item.id === parseInt(movieId));
+        if (movieExists) {
+          setOption(listName.charAt(0).toUpperCase() + listName.slice(1));
+          return;
         }
       }
-      setOption('Click to Select an Option'); // Default if the movie isn't in any list
+      setOption('Click to Select an Option');
     } catch (error) {
       console.error('Error fetching movie status:', error);
     }
@@ -104,7 +108,7 @@ const MovieDetail = () => {
 
   // Function to add movie to the watchlist
   const addToWatchlist = async (movie, targetList) => {
-    const user = auth.currentUser;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       message.error('You must be logged in to add movies to your watchlist.');
       return;
@@ -113,48 +117,64 @@ const MovieDetail = () => {
     const { id, title, poster_path, release_date, vote_average, overview, genres } = movie;
 
     try {
-      const watchlistRef = doc(db, 'watchlists', user.uid);
-      const watchlistSnapshot = await getDoc(watchlistRef);
+      // First get current watchlist
+      const { data: currentWatchlist } = await supabase
+        .from('moviewatchlist')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      let watchlistData = {
+        watching: [],
+        completed: [],
+        planned: []
+      };
+      
       let previousList = null;
 
-      if (watchlistSnapshot.exists()) {
-        const watchlistData = watchlistSnapshot.data();
+      if (currentWatchlist) {
+        watchlistData = {
+          watching: currentWatchlist.watching || [],
+          completed: currentWatchlist.completed || [],
+          planned: currentWatchlist.planned || []
+        };
 
-        // Check for the movie in all lists
+        // Check for the movie in all lists and remove it
         for (const [listName, listMovies] of Object.entries(watchlistData)) {
           const movieIndex = listMovies.findIndex((item) => item.id === id);
-
           if (movieIndex !== -1) {
-            // Movie found in another list, remove it
             previousList = listName;
-            const updatedList = listMovies.filter((item) => item.id !== id);
-            await setDoc(
-              watchlistRef,
-              { [listName]: updatedList },
-              { merge: true }
-            );
+            watchlistData[listName] = listMovies.filter((item) => item.id !== id);
             break;
           }
         }
       }
 
       // Add the movie to the target list
-      await setDoc(
-        watchlistRef,
-        {
-          [targetList]: arrayUnion({
-            id,
-            title,
-            poster_path,
-            release_date,
-            vote_average,
-            overview,
-            genres,
-            added_date: new Date().toISOString()
-          }),
-        },
-        { merge: true }
-      );
+      const movieData = {
+        id,
+        title,
+        poster_path,
+        release_date,
+        vote_average,
+        overview,
+        genres,
+        added_date: new Date().toISOString()
+      };
+      
+      watchlistData[targetList].push(movieData);
+
+      // Update or insert the watchlist
+      const { error } = await supabase
+        .from('moviewatchlist')
+        .upsert({
+          user_id: user.id,
+          ...watchlistData
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
 
       // Add activity based on the action
       let actionMessage;
@@ -175,6 +195,7 @@ const MovieDetail = () => {
       await addActivity(movie, actionMessage);
 
     } catch (error) {
+      console.error('Error updating watchlist:', error);
       message.error(`Error updating watchlist: ${error.message}`);
     }
   };
@@ -461,7 +482,7 @@ const MovieDetail = () => {
                 <Col xs={12} sm={8} md={6} lg={4} key={movie.id}>
                   <Card
                     hoverable
-                    onClick={() => handleSelect(`${item.media_type}-${item.id}`)}
+                    onClick={() => handleSelect(`movie-${movie.id}`)}
                     cover={
                       <img
                         alt={movie.title}

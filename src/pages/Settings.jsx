@@ -1,19 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
-import { 
-  updatePassword, 
-  signOut, 
-  EmailAuthProvider, 
-  reauthenticateWithCredential,
-  updateEmail,
-  deleteUser
-} from 'firebase/auth';
-import { 
-  doc, 
-  updateDoc, 
-  getDoc,
-  deleteDoc 
-} from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { 
   Card, 
   Form, 
@@ -63,12 +49,25 @@ const Settings = () => {
 
   const fetchUserPreferences = async () => {
     try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('preferences')
+        .eq('id', user.id)
+        .single();
+
+      if (data && data.preferences) {
         setUserPreferences({
           ...userPreferences,
-          ...userDoc.data().preferences
+          ...data.preferences,
+          currentEmail: user.email
+        });
+      } else {
+        setUserPreferences({
+          ...userPreferences,
+          currentEmail: user.email
         });
       }
     } catch (error) {
@@ -78,41 +77,43 @@ const Settings = () => {
 
   const handlePasswordChange = async (values) => {
     setLoading(true);
-    const user = auth.currentUser;
 
     try {
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        values.currentPassword
-      );
-      
-      await reauthenticateWithCredential(user, credential);
-
       if (values.newPassword !== values.confirmPassword) {
         throw new Error("New passwords don't match");
       }
 
-      await updatePassword(user, values.newPassword);
+      // First verify current password by signing in
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: values.currentPassword
+      });
+
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+
+      // Update password
+      const { error } = await supabase.auth.updateUser({
+        password: values.newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
       message.success('Password updated successfully');
       form.resetFields();
     } catch (error) {
       let errorMessage = 'Failed to update password';
       
-      switch (error.code) {
-        case 'auth/wrong-password':
-          errorMessage = 'Current password is incorrect';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'New password is too weak';
-          break;
-        case 'auth/requires-recent-login':
-          errorMessage = 'Please sign in again before changing your password';
-          break;
-        default:
-          if (error.message) {
-            errorMessage = error.message;
-          }
+      if (error.message.includes('Password should be at least')) {
+        errorMessage = 'New password is too weak';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
+      
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -121,18 +122,29 @@ const Settings = () => {
 
   const handleEmailChange = async (values) => {
     setLoading(true);
-    const user = auth.currentUser;
 
     try {
-      const credential = EmailAuthProvider.credential(
-        user.email,
-        values.password
-      );
+      // Verify current password by signing in
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: values.password
+      });
+
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
+
+      // Update email
+      const { error } = await supabase.auth.updateUser({
+        email: values.newEmail
+      });
+
+      if (error) {
+        throw error;
+      }
       
-      await reauthenticateWithCredential(user, credential);
-      await updateEmail(user, values.newEmail);
-      
-      message.success('Email updated successfully');
+      message.success('Email updated successfully. Please check your new email for verification.');
       emailForm.resetFields();
     } catch (error) {
       message.error('Failed to update email: ' + error.message);
@@ -143,14 +155,27 @@ const Settings = () => {
 
   const handlePreferencesChange = async (key, value) => {
     try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(userRef, {
-        [`preferences.${key}`]: value
-      });
-      setUserPreferences(prev => ({
-        ...prev,
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const updatedPreferences = {
+        ...userPreferences,
         [key]: value
-      }));
+      };
+
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          preferences: updatedPreferences
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      setUserPreferences(updatedPreferences);
       message.success('Preferences updated');
     } catch (error) {
       message.error('Failed to update preferences');
@@ -159,17 +184,30 @@ const Settings = () => {
 
   const handleDeleteAccount = async (password) => {
     try {
-      const user = auth.currentUser;
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Verify current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password
+      });
+
+      if (signInError) {
+        throw new Error('Current password is incorrect');
+      }
       
-      // Delete user data from Firestore
-      await deleteDoc(doc(db, 'users', user.uid));
-      await deleteDoc(doc(db, 'tvwatchlist', user.uid));
-      await deleteDoc(doc(db, 'moviewatchlist', user.uid));
+      // Delete user data from Supabase
+      await supabase.from('users').delete().eq('id', user.id);
+      await supabase.from('tvwatchlist').delete().eq('user_id', user.id);
+      await supabase.from('moviewatchlist').delete().eq('user_id', user.id);
       
       // Delete user account
-      await deleteUser(user);
+      const { error } = await supabase.auth.admin.deleteUser(user.id);
+      
+      if (error) {
+        throw error;
+      }
       
       message.success('Account deleted successfully');
       navigate('/login');
@@ -180,7 +218,7 @@ const Settings = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       message.success('Signed out successfully');
       navigate('/login');
     } catch (error) {
@@ -208,7 +246,7 @@ const Settings = () => {
                   onFinish={handleEmailChange}
                 >
                   <Text type="secondary">
-                    Current email: {auth.currentUser?.email}
+                    Current email: {userPreferences.currentEmail || 'Loading...'}
                   </Text>
                   <Form.Item
                     name="newEmail"
