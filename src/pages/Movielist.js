@@ -5,6 +5,15 @@ import { doc, getDoc, updateDoc, getDocs, query, collection, where } from 'fireb
 import { message, Spin, Table, Divider, Input } from 'antd';
 import { MinusCircleOutlined } from '@ant-design/icons';
 import { Link, useParams } from 'react-router-dom';
+import { 
+  PageTransition, 
+  StaggerContainer, 
+  StaggerItem, 
+  HoverLift, 
+  FadeIn, 
+  SlideUp,
+  ScaleIn
+} from '../components/animations/AnimatedComponents';
 
 const Movielist = () => {
   const { username } = useParams();
@@ -240,35 +249,65 @@ const Movielist = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" tip="Loading watchlist..." />
-      </div>
+      <PageTransition>
+        <div style={{ textAlign: 'center', padding: 50 }}>
+          <Spin size="large" tip="Loading watchlist..." />
+        </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
-      <Divider>Watching</Divider>
-      <Table
-        dataSource={watchingMovies.map((movie) => ({ ...movie, key: movie.id }))}
-        columns={columns('watching')}
-        pagination={false}
-      />
+    <PageTransition>
+      <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
+        <StaggerContainer staggerDelay={0.2}>
+          <StaggerItem>
+            <SlideUp delay={0.1}>
+              <Divider>Watching</Divider>
+            </SlideUp>
+            <FadeIn delay={0.2}>
+              <HoverLift scale={1.01} shadow={false}>
+                <Table
+                  dataSource={watchingMovies.map((movie) => ({ ...movie, key: movie.id }))}
+                  columns={columns('watching')}
+                  pagination={false}
+                />
+              </HoverLift>
+            </FadeIn>
+          </StaggerItem>
 
-      <Divider>Completed</Divider>
-      <Table
-        dataSource={completedMovies.map((movie) => ({ ...movie, key: movie.id }))}
-        columns={columns('completed')}
-        pagination={false}
-      />
+          <StaggerItem>
+            <SlideUp delay={0.1}>
+              <Divider>Completed</Divider>
+            </SlideUp>
+            <FadeIn delay={0.2}>
+              <HoverLift scale={1.01} shadow={false}>
+                <Table
+                  dataSource={completedMovies.map((movie) => ({ ...movie, key: movie.id }))}
+                  columns={columns('completed')}
+                  pagination={false}
+                />
+              </HoverLift>
+            </FadeIn>
+          </StaggerItem>
 
-      <Divider>Planned</Divider>
-      <Table
-        dataSource={plannedMovies.map((movie) => ({ ...movie, key: movie.id }))}
-        columns={columns('planned')}
-        pagination={false}
-      />
-    </div>
+          <StaggerItem>
+            <SlideUp delay={0.1}>
+              <Divider>Planned</Divider>
+            </SlideUp>
+            <FadeIn delay={0.2}>
+              <HoverLift scale={1.01} shadow={false}>
+                <Table
+                  dataSource={plannedMovies.map((movie) => ({ ...movie, key: movie.id }))}
+                  columns={columns('planned')}
+                  pagination={false}
+                />
+              </HoverLift>
+            </FadeIn>
+          </StaggerItem>
+        </StaggerContainer>
+      </div>
+    </PageTransition>
   );
 };
 

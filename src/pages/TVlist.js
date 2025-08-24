@@ -6,6 +6,14 @@
   import { MinusOutlined, MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
   import { Link, useParams } from 'react-router-dom';
   import axios from 'axios';
+  import { 
+    PageTransition, 
+    StaggerContainer, 
+    StaggerItem, 
+    HoverLift, 
+    FadeIn, 
+    SlideUp
+  } from '../components/animations/AnimatedComponents';
 
   const TVlist = () => {
     const { username } = useParams();
@@ -570,47 +578,77 @@
 
     if (loading) {
       return (
-        <div style={{ textAlign: 'center', padding: 50 }}>
-          <Spin size="large" tip="Loading watchlist..." />
-        </div>
+        <PageTransition>
+          <div style={{ textAlign: 'center', padding: 50 }}>
+            <Spin size="large" tip="Loading watchlist..." />
+          </div>
+        </PageTransition>
       );
     }
 
     return (
-      <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
-        <Divider>Watching</Divider>
-        <Table
-          dataSource={watchingShows.map((show) => ({ ...show, key: show.id }))}
-          columns={columns('watching', hoveredRow)}
-          pagination={false}
-          onRow={(record) => ({
-            onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
-            onMouseLeave: () => isOwnProfile && setHoveredRow(null),
-          })}
-        />
+      <PageTransition>
+        <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
+          <StaggerContainer staggerDelay={0.2}>
+            <StaggerItem>
+              <SlideUp delay={0.1}>
+                <Divider>Watching</Divider>
+              </SlideUp>
+              <FadeIn delay={0.2}>
+                <HoverLift scale={1.01} shadow={false}>
+                  <Table
+                    dataSource={watchingShows.map((show) => ({ ...show, key: show.id }))}
+                    columns={columns('watching', hoveredRow)}
+                    pagination={false}
+                    onRow={(record) => ({
+                      onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
+                      onMouseLeave: () => isOwnProfile && setHoveredRow(null),
+                    })}
+                  />
+                </HoverLift>
+              </FadeIn>
+            </StaggerItem>
 
-        <Divider>Completed</Divider>
-        <Table
-          dataSource={completedShows.map((show) => ({ ...show, key: show.id }))}
-          columns={columns('completed', hoveredRow)}
-          pagination={false}
-          onRow={(record) => ({
-            onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
-            onMouseLeave: () => isOwnProfile && setHoveredRow(null),
-          })}
-        />
+            <StaggerItem>
+              <SlideUp delay={0.1}>
+                <Divider>Completed</Divider>
+              </SlideUp>
+              <FadeIn delay={0.2}>
+                <HoverLift scale={1.01} shadow={false}>
+                  <Table
+                    dataSource={completedShows.map((show) => ({ ...show, key: show.id }))}
+                    columns={columns('completed', hoveredRow)}
+                    pagination={false}
+                    onRow={(record) => ({
+                      onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
+                      onMouseLeave: () => isOwnProfile && setHoveredRow(null),
+                    })}
+                  />
+                </HoverLift>
+              </FadeIn>
+            </StaggerItem>
 
-        <Divider>Planned</Divider>
-        <Table
-          dataSource={plannedShows.map((show) => ({ ...show, key: show.id }))}
-          columns={columns('planned', hoveredRow)}
-          pagination={false}
-          onRow={(record) => ({
-            onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
-            onMouseLeave: () => isOwnProfile && setHoveredRow(null),
-          })}
-        />
-      </div>
+            <StaggerItem>
+              <SlideUp delay={0.1}>
+                <Divider>Planned</Divider>
+              </SlideUp>
+              <FadeIn delay={0.2}>
+                <HoverLift scale={1.01} shadow={false}>
+                  <Table
+                    dataSource={plannedShows.map((show) => ({ ...show, key: show.id }))}
+                    columns={columns('planned', hoveredRow)}
+                    pagination={false}
+                    onRow={(record) => ({
+                      onMouseEnter: () => isOwnProfile && setHoveredRow(record.key),
+                      onMouseLeave: () => isOwnProfile && setHoveredRow(null),
+                    })}
+                  />
+                </HoverLift>
+              </FadeIn>
+            </StaggerItem>
+          </StaggerContainer>
+        </div>
+      </PageTransition>
     );
   };
 

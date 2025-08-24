@@ -5,6 +5,17 @@ import { message, Button, Dropdown, Card, Space, Typography, Image, Spin, Alert,
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc, arrayUnion, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { PlayCircleOutlined, DollarCircleOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
+import { 
+  PageTransition, 
+  StaggerContainer, 
+  StaggerItem, 
+  HoverLift, 
+  FadeIn, 
+  SlideUp,
+  SlideInLeft,
+  SlideInRight,
+  ScaleIn
+} from '../components/animations/AnimatedComponents';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -279,79 +290,107 @@ const MovieDetail = () => {
   };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '20px auto', padding: '20px' }}>
-      {/* Top Section */}
-      <Card>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={10} md={8} lg={6}>
-            <Row style={{ marginBottom: '20px' }}>
-              {movie.poster_path && (
-                <Image
-                  src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                  alt={movie.title}
-                  style={{ width: '100%', height: 'auto' }}
-                />
-              )}
+    <PageTransition>
+      <div style={{ maxWidth: '900px', margin: '20px auto', padding: '20px' }}>
+        {/* Top Section */}
+        <FadeIn delay={0.1}>
+          <Card>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={10} md={8} lg={6}>
+                <SlideInLeft delay={0.2}>
+                  <Row style={{ marginBottom: '20px' }}>
+                    {movie.poster_path && (
+                      <ScaleIn delay={0.3}>
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                          alt={movie.title}
+                          style={{ width: '100%', height: 'auto' }}
+                        />
+                      </ScaleIn>
+                    )}
+                  </Row>
+
+                  <Row style={{ marginBottom: '10px' }}>
+                    <HoverLift scale={1.02}>
+                      <Dropdown menu={{ items, onClick }}>
+                        <Button block size="large">{option}</Button>
+                      </Dropdown>
+                    </HoverLift>
+                  </Row>
+                </SlideInLeft>
+              </Col>
+
+              <Col xs={24} sm={14} md={16} lg={18}>
+                <SlideInRight delay={0.2}>
+                  <div style={{ padding: '20px' }}>
+                    <FadeIn delay={0.4}>
+                      <Title level={2}>{movie.title}</Title>
+                    </FadeIn>
+                    
+                    <FadeIn delay={0.5}>
+                      <Space size={[0, 8]} wrap>
+                        <Tag icon={<CalendarOutlined />}>{movie.release_date}</Tag>
+                        <Tag icon={<ClockCircleOutlined />}>{movie.runtime} min</Tag>
+                        <Tag icon={<DollarCircleOutlined />}>${movie.budget?.toLocaleString()}</Tag>
+                        <Tag color="gold">{movie.vote_average.toFixed(1)} / 10</Tag>
+                      </Space>
+                    </FadeIn>
+
+                    <FadeIn delay={0.6}>
+                      {movie.genres?.map(genre => (
+                        <Tag key={genre.id} style={{ margin: '8px 4px' }}>{genre.name}</Tag>
+                      ))}
+                    </FadeIn>
+
+                    <SlideUp delay={0.7}>
+                      <Paragraph style={{ marginTop: '20px' }}>{movie.overview}</Paragraph>
+                    </SlideUp>
+                  </div>
+                </SlideInRight>
+              </Col>
             </Row>
-
-            <Row style={{ marginBottom: '10px' }}>
-              <Dropdown menu={{ items, onClick }}>
-                <Button block>{option}</Button>
-              </Dropdown>
-            </Row>
-          </Col>
-
-          <Col xs={24} sm={14} md={16} lg={18}>
-            <div style={{ padding: '20px' }}>
-              <Title level={2}>{movie.title}</Title>
-              
-              <Space size={[0, 8]} wrap>
-                <Tag icon={<CalendarOutlined />}>{movie.release_date}</Tag>
-                <Tag icon={<ClockCircleOutlined />}>{movie.runtime} min</Tag>
-                <Tag icon={<DollarCircleOutlined />}>${movie.budget?.toLocaleString()}</Tag>
-                <Tag color="gold">{movie.vote_average.toFixed(1)} / 10</Tag>
-              </Space>
-
-              {movie.genres?.map(genre => (
-                <Tag key={genre.id} style={{ margin: '8px 4px' }}>{genre.name}</Tag>
-              ))}
-
-              <Paragraph style={{ marginTop: '20px' }}>{movie.overview}</Paragraph>
-            </div>
-          </Col>
-        </Row>
-      </Card>
+          </Card>
+        </FadeIn>
 
       {/* Detailed Information Tabs */}
-      <Card style={{ marginTop: '20px' }}>
-        <Tabs defaultActiveKey="cast">
-          <TabPane tab="Cast & Crew" key="cast">
-            <Row gutter={[16, 16]}>
-              <Col span={24}>
-                <Title level={4}>Top Cast</Title>
-                <Row gutter={[16, 16]}>
-                  {credits?.cast?.slice(0, 6).map(actor => (
-                    <Col xs={12} sm={8} md={6} lg={4} key={actor.id}>
-                      <Card
-                        hoverable
-                        cover={
-                          <img
-                            alt={actor.name}
-                            src={actor.profile_path 
-                              ? `https://image.tmdb.org/t/p/w300${actor.profile_path}`
-                              : '/api/placeholder/300/450'}
-                          />
-                        }
-                      >
-                        <Card.Meta
-                          title={actor.name}
-                          description={actor.character}
-                        />
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-              </Col>
+      <FadeIn delay={0.8}>
+        <Card style={{ marginTop: '20px' }}>
+          <Tabs defaultActiveKey="cast">
+            <TabPane tab="Cast & Crew" key="cast">
+              <Row gutter={[16, 16]}>
+                <Col span={24}>
+                  <SlideUp delay={0.1}>
+                    <Title level={4}>Top Cast</Title>
+                  </SlideUp>
+                  <StaggerContainer staggerDelay={0.1}>
+                    <Row gutter={[16, 16]}>
+                      {credits?.cast?.slice(0, 6).map(actor => (
+                        <Col xs={12} sm={8} md={6} lg={4} key={actor.id}>
+                          <StaggerItem>
+                            <HoverLift scale={1.05}>
+                              <Card
+                                hoverable
+                                cover={
+                                  <img
+                                    alt={actor.name}
+                                    src={actor.profile_path 
+                                      ? `https://image.tmdb.org/t/p/w300${actor.profile_path}`
+                                      : '/api/placeholder/300/450'}
+                                  />
+                                }
+                              >
+                                <Card.Meta
+                                  title={actor.name}
+                                  description={actor.character}
+                                />
+                              </Card>
+                            </HoverLift>
+                          </StaggerItem>
+                        </Col>
+                      ))}
+                    </Row>
+                  </StaggerContainer>
+                </Col>
 
               <Col span={24} style={{ marginTop: '20px' }}>
                 <Title level={4}>Director & Key Crew</Title>
@@ -440,8 +479,10 @@ const MovieDetail = () => {
             </Row>
           </TabPane>
         </Tabs>
-      </Card>
-    </div>
+        </Card>
+      </FadeIn>
+      </div>
+    </PageTransition>
   );
 };
 

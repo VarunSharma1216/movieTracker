@@ -2,6 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Layout, Row, Col, Input, Select, Button, Card, Space, Typography, Tag } from 'antd';
 import { SearchOutlined, AppstoreOutlined, TableOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { 
+  PageTransition, 
+  StaggerContainer, 
+  StaggerItem, 
+  HoverLift, 
+  FadeIn, 
+  SlideUp,
+  LayoutWrapper
+} from '../components/animations/AnimatedComponents';
 
 const { Content } = Layout;
 const { Text } = Typography;
@@ -371,259 +380,300 @@ const Browse = () => {
   };
 
   return (
-    <Layout style={{ background: '#f4f4f9', minHeight: '100vh' }}>
-      <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
-      {/* Filters Row 1 */}
-      <Row gutter={[16, 16]}>
+    <PageTransition>
+      <Layout style={{ background: '#f4f4f9', minHeight: '100vh' }}>
+        <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+        {/* Filters Row 1 */}
+        <FadeIn delay={0.1}>
+          <Row gutter={[16, 16]}>
         {/* Search */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Search</Text>
-            <Input
-              placeholder="Search titles..."
-              prefix={<SearchOutlined />}
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              style={{ width: '100%' }}
-              allowClear
-              loading={loading}
-            />
-          </div>
+          <SlideUp delay={0.1}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Search</Text>
+              <Input
+                placeholder="Search titles..."
+                prefix={<SearchOutlined />}
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                style={{ width: '100%' }}
+                allowClear
+                loading={loading}
+              />
+            </div>
+          </SlideUp>
         </Col>
 
         {/* Genre */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Genre</Text>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.genre}
-              onChange={(value) => handleFilterChange('genre', value)}
-              placeholder="Select genre"
-            >
-              <Select.Option value="Any">All Genres</Select.Option>
-              {genres.map((genre) => (
-                <Select.Option key={genre.id} value={genre.id.toString()}>
-                  {genre.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
+          <SlideUp delay={0.15}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Genre</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={filters.genre}
+                onChange={(value) => handleFilterChange('genre', value)}
+                placeholder="Select genre"
+              >
+                <Select.Option value="Any">All Genres</Select.Option>
+                {genres.map((genre) => (
+                  <Select.Option key={genre.id} value={genre.id.toString()}>
+                    {genre.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </SlideUp>
         </Col>
 
         {/* Sort By */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Sort By</Text>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.sort}
-              onChange={(value) => handleFilterChange('sort', value)}
-              placeholder="Select sorting"
-            >
-              {sortOptions.map((option) => (
-                <Select.Option key={option.value} value={option.value}>
-                  {option.label}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
+          <SlideUp delay={0.2}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Sort By</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={filters.sort}
+                onChange={(value) => handleFilterChange('sort', value)}
+                placeholder="Select sorting"
+              >
+                {sortOptions.map((option) => (
+                  <Select.Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </SlideUp>
         </Col>
 
         {/* Year */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Year</Text>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.year}
-              onChange={(value) => handleFilterChange('year', value)}
-              placeholder="Select year"
-            >
-              <Select.Option value="Any">All Years</Select.Option>
-              {Array.from({ length: 30 }, (_, i) => {
-                const year = new Date().getFullYear() - i;
-                return (
-                  <Select.Option key={year} value={year.toString()}>
-                    {year}
-                  </Select.Option>
-                );
-              })}
-            </Select>
-          </div>
+          <SlideUp delay={0.25}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Year</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={filters.year}
+                onChange={(value) => handleFilterChange('year', value)}
+                placeholder="Select year"
+              >
+                <Select.Option value="Any">All Years</Select.Option>
+                {Array.from({ length: 30 }, (_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <Select.Option key={year} value={year.toString()}>
+                      {year}
+                    </Select.Option>
+                  );
+                })}
+              </Select>
+            </div>
+          </SlideUp>
         </Col>
       </Row>
+        </FadeIn>
 
       {/* Filters Row 2 */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <FadeIn delay={0.2}>
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         {/* Streaming Provider */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Streaming</Text>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.provider}
-              onChange={(value) => handleFilterChange('provider', value)}
-              placeholder="Select service"
-            >
-              <Select.Option value="Any">All Services</Select.Option>
-              {streamingProviders.map((provider) => (
-                <Select.Option key={provider.id} value={provider.value}>
-                  {provider.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
+          <SlideUp delay={0.1}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Streaming</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={filters.provider}
+                onChange={(value) => handleFilterChange('provider', value)}
+                placeholder="Select service"
+              >
+                <Select.Option value="Any">All Services</Select.Option>
+                {streamingProviders.map((provider) => (
+                  <Select.Option key={provider.id} value={provider.value}>
+                    {provider.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </SlideUp>
         </Col>
 
         {/* Content Type */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>Content Type</Text>
-            <Select
-              style={{ width: '100%' }}
-              value={filters.format}
-              onChange={(value) => handleFilterChange('format', value)}
-              placeholder="Select type"
-            >
-              <Select.Option value="Any">All Types</Select.Option>
-              <Select.Option value="movie">Movies</Select.Option>
-              <Select.Option value="tv">TV Shows</Select.Option>
-            </Select>
-          </div>
+          <SlideUp delay={0.15}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>Content Type</Text>
+              <Select
+                style={{ width: '100%' }}
+                value={filters.format}
+                onChange={(value) => handleFilterChange('format', value)}
+                placeholder="Select type"
+              >
+                <Select.Option value="Any">All Types</Select.Option>
+                <Select.Option value="movie">Movies</Select.Option>
+                <Select.Option value="tv">TV Shows</Select.Option>
+              </Select>
+            </div>
+          </SlideUp>
         </Col>
 
         {/* View Mode */}
         <Col xs={24} sm={12} md={6} lg={6}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Text strong>View Mode</Text>
-            <Space>
-              <Button
-                type={viewMode === 'grid' ? 'primary' : 'default'}
-                icon={<AppstoreOutlined />}
-                onClick={() => handleViewModeChange('grid')}
-              >
-                Grid
-              </Button>
-              <Button
-                type={viewMode === 'compact' ? 'primary' : 'default'}
-                icon={<TableOutlined />}
-                onClick={() => handleViewModeChange('compact')}
-              >
-                Compact
-              </Button>
-            </Space>
-          </div>
+          <SlideUp delay={0.2}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Text strong>View Mode</Text>
+              <Space>
+                <HoverLift scale={1.05}>
+                  <Button
+                    type={viewMode === 'grid' ? 'primary' : 'default'}
+                    icon={<AppstoreOutlined />}
+                    onClick={() => handleViewModeChange('grid')}
+                  >
+                    Grid
+                  </Button>
+                </HoverLift>
+                <HoverLift scale={1.05}>
+                  <Button
+                    type={viewMode === 'compact' ? 'primary' : 'default'}
+                    icon={<TableOutlined />}
+                    onClick={() => handleViewModeChange('compact')}
+                  >
+                    Compact
+                  </Button>
+                </HoverLift>
+              </Space>
+            </div>
+          </SlideUp>
         </Col>
       </Row>
+      </FadeIn>
 
 
         {/* Active Filters */}
-        <Row style={{ marginTop: 24, marginBottom: 24 }}>
-          <Col span={24}>
-            <Space size={[8, 16]} wrap>
-              {searchQuery && (
-                <Tag closable onClose={handleRemoveSearch}>
-                  Search: {searchQuery}
-                </Tag>
-              )}
-              {Object.entries(filters).map(([key, value]) => (
-                value !== 'Any' && (
-                  <Tag 
-                    key={key} 
-                    closable 
-                    onClose={() => handleRemoveFilter(key)}
-                  >
-                    {key === 'sort' 
-                      ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}`
-                      : key === 'genre'
-                      ? `Genre: ${genres.find(g => g.id.toString() === value)?.name || value}`
-                      : key === 'format'
-                      ? `Type: ${value === 'movie' ? 'Movies' : value === 'tv' ? 'TV Shows' : value}`
-                      : key === 'provider'
-                      ? `Streaming: ${streamingProviders.find(p => p.value === value)?.name || value}`
-                      : `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
-                  </Tag>
-                )
-              ))}
-            </Space>
-          </Col>
-        </Row>        
+        {(searchQuery || Object.values(filters).some(value => value !== 'Any')) && (
+          <FadeIn delay={0.4}>
+            <Row style={{ marginTop: 24, marginBottom: 24 }}>
+              <Col span={24}>
+                <LayoutWrapper>
+                  <Space size={[8, 16]} wrap>
+                    {searchQuery && (
+                      <Tag closable onClose={handleRemoveSearch}>
+                        Search: {searchQuery}
+                      </Tag>
+                    )}
+                    {Object.entries(filters).map(([key, value]) => (
+                      value !== 'Any' && (
+                        <Tag 
+                          key={key} 
+                          closable 
+                          onClose={() => handleRemoveFilter(key)}
+                        >
+                          {key === 'sort' 
+                            ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}`
+                            : key === 'genre'
+                            ? `Genre: ${genres.find(g => g.id.toString() === value)?.name || value}`
+                            : key === 'format'
+                            ? `Type: ${value === 'movie' ? 'Movies' : value === 'tv' ? 'TV Shows' : value}`
+                            : key === 'provider'
+                            ? `Streaming: ${streamingProviders.find(p => p.value === value)?.name || value}`
+                            : `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
+                        </Tag>
+                      )
+                    ))}
+                  </Space>
+                </LayoutWrapper>
+              </Col>
+            </Row>
+          </FadeIn>
+        )}
 
         {/* Content Grid */}
-        <Row gutter={[16, 16]}>
-          {results.map((item) => (
-            <Col 
-
-            key={`${item.id}-${item.media_type}`}
-              xs={12}
-              sm={8}
-              md={viewMode === 'grid' ? 6 : viewMode === 'compact' ? 4 : 24}
-            >
-              <Card
-
-                hoverable
-                loading={loading}
-                onClick={() => handleSelect(`${item.media_type}-${item.id}`)}
-                cover={
-                  <div style={{ 
-                    paddingTop: '150%', 
-                    position: 'relative',
-                    background: '#f0f0f0',
-                    overflow: 'hidden'
-                  }}>
-                    <img
-                      alt={item.title || item.name}
-                      src={item.poster_path 
-                        ? `${POSTER_BASE_URL}${item.poster_path}`
-                        : '/api/placeholder/300/450'}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  </div>
-                }
-                styles={{ body: { padding: '12px' } }}
-              >
-                <Card.Meta
-      title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
-      description={
-        <Space direction="vertical" size={0}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
-          </Text>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            ⭐ {item.vote_average} ({item.vote_count} votes)
-          </Text>
-        </Space>
-      }
-    />
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        {results.length > 0 && (
+          <StaggerContainer staggerDelay={0.08}>
+            <Row gutter={[16, 16]}>
+              {results.map((item) => (
+                <Col 
+                  key={`${item.id}-${item.media_type}`}
+                  xs={12}
+                  sm={8}
+                  md={viewMode === 'grid' ? 6 : viewMode === 'compact' ? 4 : 24}
+                >
+                  <StaggerItem>
+                    <HoverLift scale={1.03} shadow={true}>
+                      <Card
+                        hoverable
+                        loading={loading}
+                        onClick={() => handleSelect(`${item.media_type}-${item.id}`)}
+                        cover={
+                          <div style={{ 
+                            paddingTop: '150%', 
+                            position: 'relative',
+                            background: '#f0f0f0',
+                            overflow: 'hidden'
+                          }}>
+                            <img
+                              alt={item.title || item.name}
+                              src={item.poster_path 
+                                ? `${POSTER_BASE_URL}${item.poster_path}`
+                                : '/api/placeholder/300/450'}
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                          </div>
+                        }
+                        styles={{ body: { padding: '12px' } }}
+                      >
+                        <Card.Meta
+                          title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
+                          description={
+                            <Space direction="vertical" size={0}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
+                              </Text>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                ⭐ {item.vote_average} ({item.vote_count} votes)
+                              </Text>
+                            </Space>
+                          }
+                        />
+                      </Card>
+                    </HoverLift>
+                  </StaggerItem>
+                </Col>
+              ))}
+            </Row>
+          </StaggerContainer>
+        )}
 
         {/* Load More Button */}
         {results.length > 0 && currentPage < totalPages && (
-          <Row justify="center" style={{ marginTop: 24 }}>
-            <Col>
-              <Button 
-                type="primary"
-                loading={loading}
-                onClick={handleLoadMore}
-              >
-                Load More
-              </Button>
-            </Col>
-          </Row>
+          <FadeIn delay={0.3}>
+            <Row justify="center" style={{ marginTop: 24 }}>
+              <Col>
+                <HoverLift scale={1.05}>
+                  <Button 
+                    type="primary"
+                    loading={loading}
+                    onClick={handleLoadMore}
+                    size="large"
+                  >
+                    Load More
+                  </Button>
+                </HoverLift>
+              </Col>
+            </Row>
+          </FadeIn>
         )}
-      </Content>
-    </Layout>
+        </Content>
+      </Layout>
+    </PageTransition>
   );
 };
 

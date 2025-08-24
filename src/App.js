@@ -1,6 +1,7 @@
 // src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Browse from './pages/Browse';
 import Movielist from './pages/Movielist';
@@ -15,11 +16,13 @@ import Home from './pages/Home';
 import Friends from './pages/Friends';
 import Settings from './pages/Settings';
 
-const App = () => {
+// Component to handle animated routes
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
   return (
-    <Router>
-      <Navbar />
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Browse />} />
         <Route path="/home" element={<Home />} />
         <Route path="/movielist" element={<Movielist />} />
@@ -30,11 +33,18 @@ const App = () => {
         <Route path="/login" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/authdetails" element={<AuthDetails />} />
-        
-        
-        <Route path="/movie/:movieId" element={<MovieDetail />} /> {/* New route for movie detail page */}
-        <Route path="/tv/:tvId" element={<TVDetail />} /> {/* New route for movie detail page */}
+        <Route path="/movie/:movieId" element={<MovieDetail />} />
+        <Route path="/tv/:tvId" element={<TVDetail />} />
       </Routes>
+    </AnimatePresence>
+  );
+};
+
+const App = () => {
+  return (
+    <Router>
+      <Navbar />
+      <AnimatedRoutes />
     </Router>
   );
 };

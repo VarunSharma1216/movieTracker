@@ -12,6 +12,17 @@ import {
 } from 'firebase/firestore';
 import { Card, Spin, Row, Col, Typography, Avatar, Space, Statistic, message } from 'antd';
 import { Link, useParams } from 'react-router-dom';
+import { 
+  PageTransition, 
+  StaggerContainer, 
+  StaggerItem, 
+  HoverLift, 
+  FadeIn, 
+  SlideUp,
+  SlideInLeft,
+  SlideInRight,
+  CountUp
+} from '../components/animations/AnimatedComponents';
 
 const { Title, Text } = Typography;
 
@@ -202,97 +213,169 @@ const Home = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" tip="Loading profile..." />
-      </div>
+      <PageTransition>
+        <div style={{ textAlign: 'center', padding: 50 }}>
+          <Spin size="large" tip="Loading profile..." />
+        </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <Row gutter={16} style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
-        <Col span={14}>
-          <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            {/* Movie Stats Overview */}
-            <Title level={3}>Movies</Title>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Total Movies" value={stats.movieTotal} />
+    <PageTransition>
+      <div style={{ padding: 24 }}>
+        <Row gutter={16} style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}>
+          <Col span={14}>
+            <SlideInLeft delay={0.1}>
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                {/* Movie Stats Overview */}
+                <FadeIn delay={0.2}>
+                  <Title level={3}>Movies</Title>
+                </FadeIn>
+                <StaggerContainer staggerDelay={0.1}>
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.3}>
+                              <Statistic title="Total Movies" value={stats.movieTotal} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.4}>
+                              <Statistic title="Watching" value={stats.movieWatching} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.5}>
+                              <Statistic title="Completed" value={stats.movieCompleted} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.6}>
+                              <Statistic title="Hours Watched" value={Math.round(stats.movieHoursWatched)} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                  </Row>
+                </StaggerContainer>
+                
+                {/* TV Stats Overview */}
+                <FadeIn delay={0.7}>
+                  <Title level={3}>TV Shows</Title>
+                </FadeIn>
+                <StaggerContainer staggerDelay={0.1}>
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.8}>
+                              <Statistic title="Total Shows" value={stats.tvTotal} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={0.9}>
+                              <Statistic title="Watching" value={stats.tvWatching} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={1.0}>
+                              <Statistic title="Completed" value={stats.tvCompleted} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                    <Col span={6}>
+                      <StaggerItem>
+                        <HoverLift scale={1.02}>
+                          <Card>
+                            <CountUp delay={1.1}>
+                              <Statistic title="Hours Watched" value={Math.round(stats.tvHoursWatched)} />
+                            </CountUp>
+                          </Card>
+                        </HoverLift>
+                      </StaggerItem>
+                    </Col>
+                  </Row>
+                </StaggerContainer>
+              </Space>
+            </SlideInLeft>
+          </Col>
+          <Col span={10}>
+            <SlideInRight delay={0.3}>
+              <HoverLift scale={1.01}>
+                <Card title="Recent Activities">
+                  <StaggerContainer staggerDelay={0.1}>
+                    {recentActivities.map((activity) => (
+                      <StaggerItem key={activity.id}>
+                        <HoverLift scale={1.01} shadow={false}>
+                          <div style={{ display: 'flex', marginBottom: '16px' }}>
+                            {activity.poster_path && (
+                              <Avatar
+                                shape="square"
+                                size={64}
+                                src={`https://image.tmdb.org/t/p/w92${activity.poster_path}`}
+                                alt={activity.title}
+                              />
+                            )}
+                            <div style={{ marginLeft: '16px', flex: 1 }}>
+                              <Title level={5}>
+                                <Link to={`/${activity.type}/${activity.mediaId}`}>
+                                  {activity.title}
+                                </Link>
+                              </Title>
+                              <Text>{activity.action}</Text>
+                              <div>
+                                <Text type="secondary">{formatTimeAgo(activity.timestamp)}</Text>
+                              </div>
+                            </div>
+                          </div>
+                        </HoverLift>
+                      </StaggerItem>
+                    ))}
+                  </StaggerContainer>
                 </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Watching" value={stats.movieWatching} />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Completed" value={stats.movieCompleted} />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Hours Watched" value={Math.round(stats.movieHoursWatched)} />
-                </Card>
-              </Col>
-            </Row>
-            
-            {/* TV Stats Overview */}
-            <Title level={3}>TV Shows</Title>
-            <Row gutter={16}>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Total Shows" value={stats.tvTotal} />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Watching" value={stats.tvWatching} />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Completed" value={stats.tvCompleted} />
-                </Card>
-              </Col>
-              <Col span={6}>
-                <Card>
-                  <Statistic title="Hours Watched" value={Math.round(stats.tvHoursWatched)} />
-                </Card>
-              </Col>
-            </Row>
-          </Space>
-        </Col>
-        <Col span={10}>
-          <Card title="Recent Activities">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} style={{ display: 'flex', marginBottom: '16px' }}>
-                {activity.poster_path && (
-                  <Avatar
-                    shape="square"
-                    size={64}
-                    src={`https://image.tmdb.org/t/p/w92${activity.poster_path}`}
-                    alt={activity.title}
-                  />
-                )}
-                <div style={{ marginLeft: '16px', flex: 1 }}>
-                  <Title level={5}>
-                    <Link to={`/${activity.type}/${activity.mediaId}`}>
-                      {activity.title}
-                    </Link>
-                  </Title>
-                  <Text>{activity.action}</Text>
-                  <div>
-                    <Text type="secondary">{formatTimeAgo(activity.timestamp)}</Text>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </Card>
-        </Col>
-      </Row>
-    </div>
+              </HoverLift>
+            </SlideInRight>
+          </Col>
+        </Row>
+      </div>
+    </PageTransition>
   );
 };
 
