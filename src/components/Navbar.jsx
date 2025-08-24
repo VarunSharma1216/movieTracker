@@ -248,14 +248,14 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <ul className="navbar-links navbar-links-desktop">
-          {currentUser || true ? (
+          {currentUser ? (
             <>
               <li>
                 <motion.div
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Link to={`/varun/profile`}>Profile</Link>
+                  <Link to={username ? `/${username}/profile` : '/login'}>Profile</Link>
                 </motion.div>
               </li>
               <li>
@@ -263,7 +263,7 @@ const Navbar = () => {
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Link to={`/varun/profile#movie-list`}>Movie List</Link>
+                  <Link to={username ? `/${username}/profile#movie-list` : '/login'}>Movie List</Link>
                 </motion.div>
               </li>
               <li>
@@ -271,7 +271,7 @@ const Navbar = () => {
                   whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Link to={`/varun/profile#tv-list`}>TV List</Link>
+                  <Link to={username ? `/${username}/profile#tv-list` : '/login'}>TV List</Link>
                 </motion.div>
               </li>
             </>
@@ -339,21 +339,21 @@ const Navbar = () => {
             transition={{ duration: 0.3 }}
           >
             <ul className="navbar-mobile-links">
-              {currentUser || true ? (
+              {currentUser ? (
                 <>
                   <li>
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Link to={`/varun/profile`} onClick={closeMobileMenu}>Profile</Link>
+                      <Link to={username ? `/${username}/profile` : '/login'} onClick={closeMobileMenu}>Profile</Link>
                     </motion.div>
                   </li>
                   <li>
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Link to={`/varun/profile#movie-list`} onClick={closeMobileMenu}>Movie List</Link>
+                      <Link to={username ? `/${username}/profile#movie-list` : '/login'} onClick={closeMobileMenu}>Movie List</Link>
                     </motion.div>
                   </li>
                   <li>
                     <motion.div whileTap={{ scale: 0.95 }}>
-                      <Link to={`/varun/profile#tv-list`} onClick={closeMobileMenu}>TV List</Link>
+                      <Link to={username ? `/${username}/profile#tv-list` : '/login'} onClick={closeMobileMenu}>TV List</Link>
                     </motion.div>
                   </li>
                 </>
