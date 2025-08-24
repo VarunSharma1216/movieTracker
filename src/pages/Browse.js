@@ -32,7 +32,18 @@ const Browse = () => {
     try {
       const saved = localStorage.getItem('movieTracker_browseFilters');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure provider is always an array for backward compatibility
+        if (parsed.provider && !Array.isArray(parsed.provider)) {
+          parsed.provider = parsed.provider === 'Any' ? [] : [parsed.provider];
+        }
+        return {
+          genre: parsed.genre || 'Any',
+          sort: parsed.sort || 'popularity.desc',
+          format: parsed.format || 'Any',
+          year: parsed.year || 'Any',
+          provider: parsed.provider || []
+        };
       }
     } catch (error) {
       console.warn('Could not load filters from localStorage:', error);
@@ -42,7 +53,7 @@ const Browse = () => {
       sort: 'popularity.desc',
       format: 'Any',
       year: 'Any',
-      provider: 'Any'
+      provider: []
     };
   };
 
@@ -187,8 +198,8 @@ const Browse = () => {
     }
 
     // Add streaming provider filter for discover endpoints
-    if (endpoint === 'discover' && filters.provider !== 'Any') {
-      baseParams.append('with_watch_providers', filters.provider);
+    if (endpoint === 'discover' && filters.provider.length > 0) {
+      baseParams.append('with_watch_providers', filters.provider.join('|'));
       baseParams.append('watch_region', 'US'); // Default to US region
       console.log('Applied streaming provider filter:', filters.provider); // Debug log
     }
@@ -354,7 +365,8 @@ const Browse = () => {
   };
 
   const handleRemoveFilter = (key) => {
-    const newFilters = { ...filters, [key]: 'Any' };
+    const defaultValue = key === 'provider' ? [] : 'Any';
+    const newFilters = { ...filters, [key]: defaultValue };
     setFilters(newFilters);
     saveFiltersToStorage(newFilters);
   };
@@ -478,12 +490,14 @@ const Browse = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <Text strong>Streaming</Text>
               <Select
+                mode="multiple"
                 style={{ width: '100%' }}
                 value={filters.provider}
                 onChange={(value) => handleFilterChange('provider', value)}
-                placeholder="Select service"
+                placeholder="Select services"
+                allowClear
+                maxTagCount="responsive"
               >
-                <Select.Option value="Any">All Services</Select.Option>
                 {streamingProviders.map((provider) => (
                   <Select.Option key={provider.id} value={provider.value}>
                     {provider.name}
@@ -546,7 +560,9 @@ const Browse = () => {
 
 
         {/* Active Filters */}
-        {(searchQuery || Object.values(filters).some(value => value !== 'Any')) && (
+        {(searchQuery || Object.entries(filters).some(([key, value]) => 
+          key === 'provider' ? value.length > 0 : value !== 'Any'
+        )) && (
           <FadeIn delay={0.4}>
             <Row style={{ marginTop: 24, marginBottom: 24 }}>
               <Col span={24}>
@@ -557,25 +573,39 @@ const Browse = () => {
                         Search: {searchQuery}
                       </Tag>
                     )}
-                    {Object.entries(filters).map(([key, value]) => (
-                      value !== 'Any' && (
-                        <Tag 
-                          key={key} 
-                          closable 
-                          onClose={() => handleRemoveFilter(key)}
-                        >
-                          {key === 'sort' 
-                            ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}`
-                            : key === 'genre'
-                            ? `Genre: ${genres.find(g => g.id.toString() === value)?.name || value}`
-                            : key === 'format'
-                            ? `Type: ${value === 'movie' ? 'Movies' : value === 'tv' ? 'TV Shows' : value}`
-                            : key === 'provider'
-                            ? `Streaming: ${streamingProviders.find(p => p.value === value)?.name || value}`
-                            : `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
-                        </Tag>
-                      )
-                    ))}
+                    {Object.entries(filters).map(([key, value]) => {
+                      if (key === 'provider' && Array.isArray(value) && value.length > 0) {
+                        return value.map(providerValue => (
+                          <Tag 
+                            key={`${key}-${providerValue}`} 
+                            closable 
+                            onClose={() => {
+                              const newProviders = value.filter(p => p !== providerValue);
+                              handleFilterChange('provider', newProviders);
+                            }}
+                          >
+                            {`Streaming: ${streamingProviders.find(p => p.value === providerValue)?.name || providerValue}`}
+                          </Tag>
+                        ));
+                      } else if (key !== 'provider' && value !== 'Any') {
+                        return (
+                          <Tag 
+                            key={key} 
+                            closable 
+                            onClose={() => handleRemoveFilter(key)}
+                          >
+                            {key === 'sort' 
+                              ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}`
+                              : key === 'genre'
+                              ? `Genre: ${genres.find(g => g.id.toString() === value)?.name || value}`
+                              : key === 'format'
+                              ? `Type: ${value === 'movie' ? 'Movies' : value === 'tv' ? 'TV Shows' : value}`
+                              : `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
+                          </Tag>
+                        );
+                      }
+                      return null;
+                    })}
                   </Space>
                 </LayoutWrapper>
               </Col>
