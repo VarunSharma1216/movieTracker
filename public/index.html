@@ -2,11 +2,357 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Movie Tracker</title>
+  
+  <!-- Mobile viewport with safe area support -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+  
+  <!-- Primary Meta Tags -->
+  <title>MovieTracker - Your Ultimate Movie & TV Show Companion</title>
+  <meta name="title" content="MovieTracker - Your Ultimate Movie & TV Show Companion" />
+  <meta name="description" content="Discover, track, and manage your favorite movies and TV shows. Create watchlists, rate content, and connect with friends who share your passion for entertainment." />
+  <meta name="keywords" content="movies, tv shows, watchlist, tracker, entertainment, ratings, reviews, TMDB" />
+  <meta name="author" content="MovieTracker" />
+  
+  <!-- PWA Theme Configuration -->
+  <meta name="theme-color" content="#302c44" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#302c44" media="(prefers-color-scheme: dark)" />
+  <meta name="background-color" content="#302c44" />
+  <meta name="color-scheme" content="light dark" />
+  
+  <!-- iOS PWA Configuration -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MovieTracker" />
+  <meta name="apple-touch-fullscreen" content="yes" />
+  
+  <!-- iOS Touch Icons -->
+  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png" />
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png" />
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png" />
+  
+  <!-- Standard Favicons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- iOS Splash Screens -->
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-640-1136.jpg" />
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-750-1334.jpg" />
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-1242-2208.jpg" />
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-1125-2436.jpg" />
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-828-1792.jpg" />
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-1242-2688.jpg" />
+  
+  <!-- Microsoft Tiles for Windows -->
+  <meta name="msapplication-TileColor" content="#302c44" />
+  <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="/" />
+  <meta property="og:title" content="MovieTracker - Your Ultimate Movie & TV Show Companion" />
+  <meta property="og:description" content="Discover, track, and manage your favorite movies and TV shows. Create watchlists, rate content, and connect with friends." />
+  <meta property="og:image" content="/og-image.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="MovieTracker" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="/" />
+  <meta property="twitter:title" content="MovieTracker - Your Ultimate Movie & TV Show Companion" />
+  <meta property="twitter:description" content="Discover, track, and manage your favorite movies and TV shows. Create watchlists, rate content, and connect with friends." />
+  <meta property="twitter:image" content="/twitter-image.jpg" />
+  
+  <!-- Preconnect to external domains for performance -->
+  <link rel="preconnect" href="https://api.themoviedb.org" crossorigin />
+  <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+  <link rel="preconnect" href="https://abwhjssyitkruhmpjaqq.supabase.co" crossorigin />
+  
+  <!-- DNS prefetch for faster loading -->
+  <link rel="dns-prefetch" href="//api.themoviedb.org" />
+  <link rel="dns-prefetch" href="//image.tmdb.org" />
+  <link rel="dns-prefetch" href="//abwhjssyitkruhmpjaqq.supabase.co" />
+  
+  <!-- Preload critical resources -->
+  <link rel="preload" href="/static/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="/static/css/main.css" /></noscript>
+  
+  <!-- Security headers -->
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   
 </head>
 <body>
-  <div id="root"></div> <!-- React app will be rendered here -->
+  <!-- No JavaScript fallback -->
+  <noscript>
+    <div style="
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #302c44 0%, #434a54 100%);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    ">
+      <div>
+        <h1 style="font-size: 2.5rem; margin-bottom: 1rem;">🎬 MovieTracker</h1>
+        <p style="font-size: 1.2rem; opacity: 0.9;">
+          JavaScript is required to run this application.<br>
+          Please enable JavaScript in your browser settings.
+        </p>
+      </div>
+    </div>
+  </noscript>
+  
+  <!-- App root -->
+  <div id="root"></div>
+  
+  <!-- PWA Installation and Service Worker Script -->
+  <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          });
+          
+          console.log('✅ ServiceWorker registered successfully');
+          
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Show update notification
+                showUpdateNotification();
+              }
+            });
+          });
+          
+          // Listen for messages from service worker
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data?.type === 'CACHE_UPDATED') {
+              console.log('🔄 App cache updated');
+            }
+          });
+          
+        } catch (error) {
+          console.log('❌ ServiceWorker registration failed:', error);
+        }
+      });
+    }
+    
+    // PWA Install Prompt Handling
+    let deferredPrompt;
+    let isInstalled = false;
+    
+    // Check if already running as PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || 
+        window.navigator.standalone === true) {
+      isInstalled = true;
+      document.documentElement.classList.add('pwa-installed');
+      console.log('🎉 Running as installed PWA');
+    }
+    
+    // Handle install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log('💾 PWA install prompt available');
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Show custom install banner after user explores the app
+      setTimeout(() => {
+        if (deferredPrompt && !isInstalled) {
+          showInstallBanner();
+        }
+      }, 5000); // Show after 5 seconds
+    });
+    
+    // Handle successful installation
+    window.addEventListener('appinstalled', (evt) => {
+      console.log('🎉 MovieTracker PWA installed successfully');
+      isInstalled = true;
+      deferredPrompt = null;
+      
+      // Hide any install banners
+      hideInstallBanner();
+      
+      // Optional: Track installation for analytics
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'pwa_installed', {
+          event_category: 'engagement',
+          event_label: 'PWA Installation'
+        });
+      }
+    });
+    
+    // Custom install banner functions
+    function showInstallBanner() {
+      // Create and show a custom install banner
+      const banner = document.createElement('div');
+      banner.id = 'pwa-install-banner';
+      banner.innerHTML = `
+        <div style="
+          position: fixed;
+          bottom: 20px;
+          left: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #302c44 0%, #434a54 100%);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
+        ">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center;">
+              <span style="font-size: 1.2em; margin-right: 8px;">🎬</span>
+              Install MovieTracker
+            </div>
+            <div style="font-size: 0.9em; opacity: 0.9;">
+              Add to your home screen for quick access and offline features
+            </div>
+          </div>
+          <div>
+            <button onclick="dismissInstallBanner()" style="
+              background: rgba(255,255,255,0.1);
+              border: 1px solid rgba(255,255,255,0.2);
+              color: white;
+              padding: 8px 12px;
+              border-radius: 6px;
+              margin-right: 8px;
+              cursor: pointer;
+              font-size: 0.9em;
+            ">Later</button>
+            <button onclick="installPWA()" style="
+              background: rgba(255,255,255,0.9);
+              color: #302c44;
+              border: none;
+              padding: 8px 16px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 600;
+              font-size: 0.9em;
+            ">Install</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(banner);
+      
+      // Animate in
+      setTimeout(() => {
+        banner.style.transform = 'translateY(0)';
+        banner.style.opacity = '1';
+      }, 100);
+    }
+    
+    function hideInstallBanner() {
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner) {
+        banner.remove();
+      }
+    }
+    
+    function dismissInstallBanner() {
+      hideInstallBanner();
+      // Don't show again for this session
+      sessionStorage.setItem('installBannerDismissed', 'true');
+    }
+    
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          console.log('PWA install choice:', choiceResult.outcome);
+          deferredPrompt = null;
+          hideInstallBanner();
+        });
+      }
+    }
+    
+    // Update notification
+    function showUpdateNotification() {
+      const notification = document.createElement('div');
+      notification.innerHTML = `
+        <div style="
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          right: 20px;
+          background: #302c44;
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+          z-index: 10001;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        ">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 4px;">Update Available</div>
+            <div style="font-size: 0.9em; opacity: 0.9;">A new version of MovieTracker is ready</div>
+          </div>
+          <button onclick="window.location.reload()" style="
+            background: rgba(255,255,255,0.9);
+            color: #302c44;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+          ">Refresh</button>
+        </div>
+      `;
+      document.body.appendChild(notification);
+      
+      // Auto-hide after 10 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 10000);
+    }
+    
+    // Expose install function globally for potential use in React components
+    window.installMovieTrackerPWA = installPWA;
+    
+    // Handle offline/online status
+    window.addEventListener('online', () => {
+      console.log('🌐 Back online');
+      // Optionally show a notification or update UI
+    });
+    
+    window.addEventListener('offline', () => {
+      console.log('📱 Now offline - PWA features active');
+      // Optionally show a notification or update UI
+    });
+    
+  </script>
 </body>
 </html>
