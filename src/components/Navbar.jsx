@@ -190,6 +190,9 @@ const Navbar = () => {
         
         <ul className="navbar-links navbar-links-desktop">
           <li>
+            <Link to="/login">Login</Link>
+          </li>
+          <li>
             <Link to="/">Browse</Link>
           </li>
           <li>
