@@ -51,9 +51,14 @@ const Friends = ({ userId }) => {
   useEffect(() => {
     if (userId) {
       loadFriendsData();
-      loadFriendRequests();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (userId && currentUser) {
+      loadFriendRequests();
+    }
+  }, [userId, currentUser]);
 
   const loadFriendsData = async () => {
     setLoading(true);
@@ -96,9 +101,16 @@ const Friends = ({ userId }) => {
   };
 
   const loadFriendRequests = async () => {
-    if (!currentUser || currentUser.id !== userId) return;
+    if (!currentUser) {
+      console.log('Skipping friend requests load - no current user');
+      return;
+    }
+
+    console.log('Debug - currentUser.id:', currentUser.id, 'userId:', userId, 'match:', currentUser.id === userId);
 
     try {
+      console.log('Loading friend requests for user:', userId);
+      
       // Load incoming friend requests (for inbox)
       const { data: incomingRequests, error: incomingError } = await supabase
         .from('friend_requests')
@@ -108,6 +120,8 @@ const Friends = ({ userId }) => {
         `)
         .eq('receiver_id', userId)
         .eq('status', 'pending');
+
+      console.log('Incoming requests result:', { incomingRequests, incomingError });
 
       if (incomingError) {
         console.error('Error loading incoming requests:', incomingError);
@@ -121,6 +135,8 @@ const Friends = ({ userId }) => {
         .select('receiver_id')
         .eq('sender_id', userId)
         .eq('status', 'pending');
+
+      console.log('Outgoing requests result:', { outgoingRequests, outgoingError });
 
       if (outgoingError) {
         console.error('Error loading outgoing requests:', outgoingError);
@@ -167,27 +183,37 @@ const Friends = ({ userId }) => {
     if (!currentUser) return;
 
     try {
-      const { error } = await supabase
+      console.log('Sending friend request:', { sender: currentUser.id, receiver: receiverId });
+      
+      const { data, error } = await supabase
         .from('friend_requests')
         .insert({
           sender_id: currentUser.id,
           receiver_id: receiverId,
           status: 'pending'
-        });
+        })
+        .select();
 
       if (error) {
-        console.error('Error sending friend request:', error);
-        message.error('Error sending friend request');
+        console.error('Supabase error sending friend request:', error);
+        message.error(`Error sending friend request: ${error.message}`);
         return;
       }
 
+      console.log('Friend request sent successfully:', data);
       message.success('Friend request sent!');
-      // Remove from search results and reload requests
+      
+      // Add to sent requests to update UI immediately
+      setSentRequests(prev => [...prev, receiverId]);
+      
+      // Remove from search results
       setSearchResults(prev => prev.filter(user => user.id !== receiverId));
+      
+      // Reload requests
       loadFriendRequests();
     } catch (error) {
       console.error('Error sending friend request:', error);
-      message.error('Error sending friend request');
+      message.error(`Error sending friend request: ${error.message}`);
     }
   };
 
@@ -326,6 +352,7 @@ const Friends = ({ userId }) => {
   };
 
   const isOwnProfile = currentUser && currentUser.id === userId;
+  console.log('Debug - isOwnProfile:', isOwnProfile, 'friendRequests.length:', friendRequests.length);
 
   if (loading) {
     return (
@@ -411,13 +438,22 @@ const Friends = ({ userId }) => {
                     hoverable
                     style={{ textAlign: 'center' }}
                     actions={[
-                      <Button 
-                        type="primary" 
-                        icon={<UserAddOutlined />}
-                        onClick={() => sendFriendRequest(user.id)}
-                      >
-                        Send Request
-                      </Button>
+                      sentRequests.includes(user.id) ? (
+                        <Button 
+                          disabled
+                          type="default"
+                        >
+                          Request Sent
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="primary" 
+                          icon={<UserAddOutlined />}
+                          onClick={() => sendFriendRequest(user.id)}
+                        >
+                          Send Request
+                        </Button>
+                      )
                     ]}
                   >
                     <Link to={`/${user.username}/profile`} style={{ textDecoration: 'none' }}>
