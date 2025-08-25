@@ -62,6 +62,8 @@ const Friends = ({ userId }) => {
 
   const loadFriendsData = async () => {
     setLoading(true);
+    console.log(`🔄 Loading friends data for userId: ${userId}`);
+    
     try {
       // Get the user's friends array
       const { data: userData, error: userError } = await supabase
@@ -70,6 +72,8 @@ const Friends = ({ userId }) => {
         .eq('id', userId)
         .single();
 
+      console.log(`📋 User data result:`, { userData, userError });
+
       if (userError) {
         console.error('Error loading user data:', userError);
         setLoading(false);
@@ -77,6 +81,7 @@ const Friends = ({ userId }) => {
       }
 
       const friendIds = userData?.friends || [];
+      console.log(`👥 Friend IDs for user ${userId}:`, friendIds);
       setUserFriends(friendIds);
 
       if (friendIds.length > 0) {
@@ -86,12 +91,16 @@ const Friends = ({ userId }) => {
           .select('id, username')
           .in('id', friendIds);
 
+        console.log(`📇 Friends details result:`, { friendsData, friendsError });
+
         if (friendsError) {
           console.error('Error loading friends data:', friendsError);
         } else {
           setFriends(friendsData || []);
+          console.log(`✅ Set friends state:`, friendsData);
         }
       } else {
+        console.log(`📭 No friends found for user ${userId}`);
         setFriends([]);
       }
     } catch (error) {
@@ -222,47 +231,22 @@ const Friends = ({ userId }) => {
 
     try {
       if (action === 'accept') {
-        // Accept the request
-        const { error: updateError } = await supabase
-          .from('friend_requests')
-          .update({ 
-            status: 'accepted',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', requestId);
-
-        if (updateError) {
-          console.error('Error accepting request:', updateError);
-          message.error('Error accepting friend request');
-          return;
-        }
-
-        // Add each other as friends
-        console.log(`Adding friends: ${currentUser.id} <-> ${senderId}`);
+        console.log(`Accepting friend request: ${requestId}, accepter: ${currentUser.id}, requester: ${senderId}`);
         
-        try {
-          await addToFriendsList(currentUser.id, senderId);
-          console.log(`✅ Added ${senderId} to ${currentUser.id}'s friends list`);
-          
-          await addToFriendsList(senderId, currentUser.id);
-          console.log(`✅ Added ${currentUser.id} to ${senderId}'s friends list`);
-        } catch (friendError) {
-          console.error('Error adding friends:', friendError);
-          message.error('Error creating friendship');
+        // Use the Supabase function to handle bidirectional friendship
+        const { error: acceptError } = await supabase.rpc('accept_friend_request', {
+          request_id: requestId,
+          accepter_id: currentUser.id,
+          requester_id: senderId
+        });
+
+        if (acceptError) {
+          console.error('Error accepting friend request:', acceptError);
+          message.error(`Error accepting friend request: ${acceptError.message}`);
           return;
         }
 
-        // Delete the request after successful acceptance
-        const { error: deleteError } = await supabase
-          .from('friend_requests')
-          .delete()
-          .eq('id', requestId);
-
-        if (deleteError) {
-          console.error('Error deleting request:', deleteError);
-          // Don't return here - the friendship was created successfully
-        }
-
+        console.log('✅ Friend request accepted successfully via RPC function');
         message.success('Friend request accepted! You are now friends.');
         
       } else if (action === 'decline') {
