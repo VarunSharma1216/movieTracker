@@ -238,14 +238,30 @@ const Friends = ({ userId }) => {
         }
 
         // Add each other as friends
-        await addToFriendsList(currentUser.id, senderId);
-        await addToFriendsList(senderId, currentUser.id);
+        console.log(`Adding friends: ${currentUser.id} <-> ${senderId}`);
+        
+        try {
+          await addToFriendsList(currentUser.id, senderId);
+          console.log(`✅ Added ${senderId} to ${currentUser.id}'s friends list`);
+          
+          await addToFriendsList(senderId, currentUser.id);
+          console.log(`✅ Added ${currentUser.id} to ${senderId}'s friends list`);
+        } catch (friendError) {
+          console.error('Error adding friends:', friendError);
+          message.error('Error creating friendship');
+          return;
+        }
 
         // Delete the request after successful acceptance
-        await supabase
+        const { error: deleteError } = await supabase
           .from('friend_requests')
           .delete()
           .eq('id', requestId);
+
+        if (deleteError) {
+          console.error('Error deleting request:', deleteError);
+          // Don't return here - the friendship was created successfully
+        }
 
         message.success('Friend request accepted! You are now friends.');
         
@@ -276,6 +292,8 @@ const Friends = ({ userId }) => {
 
   const addToFriendsList = async (userId, friendId) => {
     try {
+      console.log(`Adding ${friendId} to ${userId}'s friends list`);
+      
       // Get current friends list
       const { data: userData, error: getUserError } = await supabase
         .from('users')
@@ -284,15 +302,17 @@ const Friends = ({ userId }) => {
         .single();
 
       if (getUserError) {
-        console.error('Error getting user friends:', getUserError);
-        return;
+        console.error(`Error getting user ${userId} friends:`, getUserError);
+        throw getUserError;
       }
 
       const currentFriends = userData?.friends || [];
+      console.log(`${userId} current friends:`, currentFriends);
       
       // Add friend if not already in list
       if (!currentFriends.includes(friendId)) {
         const updatedFriends = [...currentFriends, friendId];
+        console.log(`${userId} updated friends:`, updatedFriends);
         
         const { error: updateError } = await supabase
           .from('users')
@@ -300,11 +320,17 @@ const Friends = ({ userId }) => {
           .eq('id', userId);
 
         if (updateError) {
-          console.error('Error updating friends list:', updateError);
+          console.error(`Error updating ${userId} friends list:`, updateError);
+          throw updateError;
+        } else {
+          console.log(`✅ Successfully added ${friendId} to ${userId}'s friends`);
         }
+      } else {
+        console.log(`${friendId} already in ${userId}'s friends list`);
       }
     } catch (error) {
-      console.error('Error adding to friends list:', error);
+      console.error(`Error adding ${friendId} to ${userId}'s friends list:`, error);
+      throw error;
     }
   };
 
