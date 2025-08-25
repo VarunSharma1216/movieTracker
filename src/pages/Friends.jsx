@@ -9,12 +9,17 @@ import {
   Typography, 
   message,
   Spin,
-  Empty
+  Empty,
+  Badge,
+  Space
 } from 'antd';
 import { 
   UserOutlined, 
   UserAddOutlined,
-  UserDeleteOutlined
+  UserDeleteOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  InboxOutlined
 } from '@ant-design/icons';
 import { supabase } from '../supabase';
 import { Link } from 'react-router-dom';
@@ -29,6 +34,8 @@ const Friends = ({ userId }) => {
   const [searching, setSearching] = useState(false);
   const [friends, setFriends] = useState([]);
   const [userFriends, setUserFriends] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [sentRequests, setSentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Get current authenticated user
@@ -40,10 +47,11 @@ const Friends = ({ userId }) => {
     getCurrentUser();
   }, []);
 
-  // Load friends data
+  // Load friends data and requests
   useEffect(() => {
     if (userId) {
       loadFriendsData();
+      loadFriendRequests();
     }
   }, [userId]);
 
@@ -87,6 +95,43 @@ const Friends = ({ userId }) => {
     setLoading(false);
   };
 
+  const loadFriendRequests = async () => {
+    if (!currentUser || currentUser.id !== userId) return;
+
+    try {
+      // Load incoming friend requests (for inbox)
+      const { data: incomingRequests, error: incomingError } = await supabase
+        .from('friend_requests')
+        .select(`
+          *,
+          sender:users!sender_id(id, username)
+        `)
+        .eq('receiver_id', userId)
+        .eq('status', 'pending');
+
+      if (incomingError) {
+        console.error('Error loading incoming requests:', incomingError);
+      } else {
+        setFriendRequests(incomingRequests || []);
+      }
+
+      // Load outgoing friend requests (to filter search results)
+      const { data: outgoingRequests, error: outgoingError } = await supabase
+        .from('friend_requests')
+        .select('receiver_id')
+        .eq('sender_id', userId)
+        .eq('status', 'pending');
+
+      if (outgoingError) {
+        console.error('Error loading outgoing requests:', outgoingError);
+      } else {
+        setSentRequests(outgoingRequests?.map(req => req.receiver_id) || []);
+      }
+    } catch (error) {
+      console.error('Error loading friend requests:', error);
+    }
+  };
+
   const searchUsers = async (query) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -106,8 +151,9 @@ const Friends = ({ userId }) => {
         console.error('Error searching users:', error);
         message.error('Error searching users');
       } else {
-        // Filter out existing friends
-        const filteredResults = data?.filter(user => !userFriends.includes(user.id)) || [];
+        // Filter out existing friends and users with pending requests
+        const excludeIds = [...userFriends, ...sentRequests];
+        const filteredResults = data?.filter(user => !excludeIds.includes(user.id)) || [];
         setSearchResults(filteredResults);
       }
     } catch (error) {
@@ -117,70 +163,122 @@ const Friends = ({ userId }) => {
     setSearching(false);
   };
 
-  const addFriend = async (friendId) => {
+  const sendFriendRequest = async (receiverId) => {
     if (!currentUser) return;
 
     try {
-      // Get current user's friends array
-      const { data: currentUserData, error: getCurrentError } = await supabase
-        .from('users')
-        .select('friends')
-        .eq('id', currentUser.id)
-        .single();
+      const { error } = await supabase
+        .from('friend_requests')
+        .insert({
+          sender_id: currentUser.id,
+          receiver_id: receiverId,
+          status: 'pending'
+        });
 
-      if (getCurrentError) {
-        console.error('Error getting current user:', getCurrentError);
-        message.error('Error adding friend');
+      if (error) {
+        console.error('Error sending friend request:', error);
+        message.error('Error sending friend request');
         return;
       }
 
-      const currentFriends = currentUserData?.friends || [];
+      message.success('Friend request sent!');
+      // Remove from search results and reload requests
+      setSearchResults(prev => prev.filter(user => user.id !== receiverId));
+      loadFriendRequests();
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+      message.error('Error sending friend request');
+    }
+  };
+
+  const respondToFriendRequest = async (requestId, senderId, action) => {
+    if (!currentUser) return;
+
+    try {
+      if (action === 'accept') {
+        // Accept the request
+        const { error: updateError } = await supabase
+          .from('friend_requests')
+          .update({ 
+            status: 'accepted',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+
+        if (updateError) {
+          console.error('Error accepting request:', updateError);
+          message.error('Error accepting friend request');
+          return;
+        }
+
+        // Add each other as friends
+        await addToFriendsList(currentUser.id, senderId);
+        await addToFriendsList(senderId, currentUser.id);
+
+        // Delete the request after successful acceptance
+        await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('id', requestId);
+
+        message.success('Friend request accepted! You are now friends.');
+        
+      } else if (action === 'decline') {
+        // Decline/delete the request
+        const { error } = await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('id', requestId);
+
+        if (error) {
+          console.error('Error declining request:', error);
+          message.error('Error declining friend request');
+          return;
+        }
+
+        message.success('Friend request declined');
+      }
+
+      // Reload data
+      loadFriendRequests();
+      loadFriendsData();
+    } catch (error) {
+      console.error('Error responding to friend request:', error);
+      message.error('Error processing request');
+    }
+  };
+
+  const addToFriendsList = async (userId, friendId) => {
+    try {
+      // Get current friends list
+      const { data: userData, error: getUserError } = await supabase
+        .from('users')
+        .select('friends')
+        .eq('id', userId)
+        .single();
+
+      if (getUserError) {
+        console.error('Error getting user friends:', getUserError);
+        return;
+      }
+
+      const currentFriends = userData?.friends || [];
       
-      // Add friend to current user's friends list
+      // Add friend if not already in list
       if (!currentFriends.includes(friendId)) {
         const updatedFriends = [...currentFriends, friendId];
         
         const { error: updateError } = await supabase
           .from('users')
           .update({ friends: updatedFriends })
-          .eq('id', currentUser.id);
+          .eq('id', userId);
 
         if (updateError) {
-          console.error('Error adding friend:', updateError);
-          message.error('Error adding friend');
-          return;
-        }
-
-        // Also add current user to the friend's friends list
-        const { data: friendData, error: getFriendError } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', friendId)
-          .single();
-
-        if (!getFriendError) {
-          const friendFriends = friendData?.friends || [];
-          if (!friendFriends.includes(currentUser.id)) {
-            const updatedFriendFriends = [...friendFriends, currentUser.id];
-            
-            await supabase
-              .from('users')
-              .update({ friends: updatedFriendFriends })
-              .eq('id', friendId);
-          }
-        }
-
-        message.success('Friend added successfully!');
-        setSearchResults(prev => prev.filter(user => user.id !== friendId));
-        
-        // Reload friends data if viewing own profile
-        if (currentUser.id === userId) {
-          loadFriendsData();
+          console.error('Error updating friends list:', updateError);
         }
       }
     } catch (error) {
-      console.error('Error adding friend:', error);
-      message.error('Error adding friend');
+      console.error('Error adding to friends list:', error);
     }
   };
 
@@ -284,8 +382,9 @@ const Friends = ({ userId }) => {
     }
   ];
 
-  // Add search tab only for own profile
+  // Add search and inbox tabs only for own profile
   if (isOwnProfile) {
+    // Add Find Friends tab
     tabItems.unshift({
       key: 'search',
       label: 'Find Friends',
@@ -315,9 +414,9 @@ const Friends = ({ userId }) => {
                       <Button 
                         type="primary" 
                         icon={<UserAddOutlined />}
-                        onClick={() => addFriend(user.id)}
+                        onClick={() => sendFriendRequest(user.id)}
                       >
-                        Add Friend
+                        Send Request
                       </Button>
                     ]}
                   >
@@ -337,6 +436,65 @@ const Friends = ({ userId }) => {
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description="No users found"
+            />
+          )}
+        </div>
+      )
+    });
+
+    // Add Inbox tab
+    tabItems.push({
+      key: 'inbox',
+      label: (
+        <Space>
+          <InboxOutlined />
+          Inbox
+          {friendRequests.length > 0 && (
+            <Badge count={friendRequests.length} size="small" />
+          )}
+        </Space>
+      ),
+      children: (
+        <div>
+          <Title level={4}>Friend Requests</Title>
+          {friendRequests.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="No pending friend requests"
+            />
+          ) : (
+            <List
+              dataSource={friendRequests}
+              renderItem={request => (
+                <List.Item
+                  actions={[
+                    <Button 
+                      type="primary" 
+                      icon={<CheckOutlined />}
+                      onClick={() => respondToFriendRequest(request.id, request.sender.id, 'accept')}
+                    >
+                      Accept
+                    </Button>,
+                    <Button 
+                      danger
+                      icon={<CloseOutlined />}
+                      onClick={() => respondToFriendRequest(request.id, request.sender.id, 'decline')}
+                    >
+                      Decline
+                    </Button>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<Avatar icon={<UserOutlined />} />}
+                    title={
+                      <Link to={`/${request.sender.username}/profile`}>
+                        {request.sender.username}
+                      </Link>
+                    }
+                    description={`Sent you a friend request • ${new Date(request.created_at).toLocaleDateString()}`}
+                  />
+                </List.Item>
+              )}
             />
           )}
         </div>
