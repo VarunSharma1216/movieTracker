@@ -12,6 +12,7 @@ const SignIn = () => {
   const[loggedIn, setLoggedIn] = useState(false);
   const navigate = useNavigate();
 
+
   const handleSignIn = async () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -98,6 +99,7 @@ const SignIn = () => {
             Log In
           </Button>
         </Form.Item>
+
         
         <Text style={{ display: 'block', textAlign: 'center' }}>
           Don’t have an account? <Link to="/signup">Create one</Link>

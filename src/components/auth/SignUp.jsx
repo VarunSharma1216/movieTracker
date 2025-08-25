@@ -40,22 +40,32 @@ const SignUp = () => {
   
 
   const handleSignUp = async () => {
+    console.log('=== SIGNUP PROCESS STARTED ===');
+    console.log('Form data:', { username, email, password: '***' });
+
     if (password !== confirmPassword) {
+      console.log('❌ Password mismatch');
       message.error("Passwords do not match!");
       return;
     }
 
     try {
       setIsSubmitting(true);
+      console.log('🔄 Setting isSubmitting to true');
 
       // Check username availability one last time before creating account
+      console.log('🔍 Checking username availability...');
       const usernameExists = await checkUsernameExists(username);
+      console.log('Username exists check result:', usernameExists);
+      
       if (usernameExists) {
+        console.log('❌ Username already taken');
         message.error("Username already taken. Please choose another one.");
         return;
       }
 
       // Create user in Supabase Auth
+      console.log('🚀 Creating user in Supabase Auth...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -66,17 +76,56 @@ const SignUp = () => {
         }
       });
 
+      console.log('Supabase Auth Response:', { data, error });
+
       if (error) {
+        console.log('❌ Supabase Auth Error:', error);
         message.error(`Error signing up: ${error.message}`);
         return;
       }
 
-      message.success('Account created successfully! Please check your email to verify your account.');
+      console.log('✅ Auth user created successfully');
+      console.log('User data:', data.user);
+
+      // Create user profile record
+      if (data.user) {
+        console.log('👤 Creating user profile record...');
+        try {
+          const profileData = {
+            id: data.user.id,
+            username: username.toLowerCase(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          console.log('Profile data to insert:', profileData);
+          
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert(profileData);
+
+          if (profileError) {
+            console.log('❌ Profile creation error:', profileError);
+          } else {
+            console.log('✅ User profile created successfully');
+          }
+        } catch (profileError) {
+          console.log('❌ Profile creation exception:', profileError);
+        }
+      } else {
+        console.log('⚠️ No user data returned from auth signup');
+      }
+
+      console.log('✅ SIGNUP PROCESS COMPLETED');
+      message.success('Account created successfully! You can now log in.');
       form.resetFields();
     } catch (error) {
+      console.log('❌ SIGNUP PROCESS FAILED:', error);
       message.error(`Error signing up: ${error.message}`);
     } finally {
       setIsSubmitting(false);
+      console.log('🔄 Setting isSubmitting to false');
+      console.log('=== SIGNUP PROCESS ENDED ===');
     }
   };
 
