@@ -1,117 +1,118 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Row, Col, Input, Select, Button, Card, Space, Typography, Tag } from 'antd';
-import { SearchOutlined, AppstoreOutlined, TableOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { 
-  PageTransition, 
-  StaggerContainer, 
-  StaggerItem, 
-  HoverLift, 
-  FadeIn, 
-  SlideUp,
-  LayoutWrapper
-} from '../components/animations/AnimatedComponents';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Layout,
+  Row,
+  Col,
+  Input,
+  Select,
+  Button,
+  Card,
+  Space,
+  Typography,
+  Tag,
+} from "antd";
+import {
+  SearchOutlined,
+  AppstoreOutlined,
+  TableOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 const { Text } = Typography;
 
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
 
 const Browse = () => {
   // Helper functions for localStorage
   const saveFiltersToStorage = (filtersToSave) => {
     try {
-      localStorage.setItem('movieTracker_browseFilters', JSON.stringify(filtersToSave));
+      localStorage.setItem(
+        "movieTracker_browseFilters",
+        JSON.stringify(filtersToSave)
+      );
     } catch (error) {
-      console.warn('Could not save filters to localStorage:', error);
+      console.warn("Could not save filters to localStorage:", error);
     }
   };
 
   const loadFiltersFromStorage = () => {
     try {
-      const saved = localStorage.getItem('movieTracker_browseFilters');
+      const saved = localStorage.getItem("movieTracker_browseFilters");
       if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure provider is always an array for backward compatibility
-        if (parsed.provider && !Array.isArray(parsed.provider)) {
-          parsed.provider = parsed.provider === 'Any' ? [] : [parsed.provider];
-        }
-        return {
-          genre: parsed.genre || 'Any',
-          sort: parsed.sort || 'popularity.desc',
-          format: parsed.format || 'Any',
-          year: parsed.year || 'Any',
-          provider: parsed.provider || []
-        };
+        return JSON.parse(saved);
       }
     } catch (error) {
-      console.warn('Could not load filters from localStorage:', error);
+      console.warn("Could not load filters from localStorage:", error);
     }
     return {
-      genre: 'Any',
-      sort: 'popularity.desc',
-      format: 'Any',
-      year: 'Any',
-      provider: []
+      genre: "Any",
+      sort: "popularity.desc",
+      format: "Any",
+      year: "Any",
+      provider: "Any",
     };
   };
 
   const saveSearchToStorage = (search) => {
     try {
-      localStorage.setItem('movieTracker_searchQuery', search);
+      localStorage.setItem("movieTracker_searchQuery", search);
     } catch (error) {
-      console.warn('Could not save search to localStorage:', error);
+      console.warn("Could not save search to localStorage:", error);
     }
   };
 
   const loadSearchFromStorage = () => {
     try {
-      return localStorage.getItem('movieTracker_searchQuery') || '';
+      return localStorage.getItem("movieTracker_searchQuery") || "";
     } catch (error) {
-      console.warn('Could not load search from localStorage:', error);
-      return '';
+      console.warn("Could not load search from localStorage:", error);
+      return "";
     }
   };
 
   const saveViewModeToStorage = (mode) => {
     try {
-      localStorage.setItem('movieTracker_viewMode', mode);
+      localStorage.setItem("movieTracker_viewMode", mode);
     } catch (error) {
-      console.warn('Could not save view mode to localStorage:', error);
+      console.warn("Could not save view mode to localStorage:", error);
     }
   };
 
   const loadViewModeFromStorage = () => {
     try {
-      return localStorage.getItem('movieTracker_viewMode') || 'grid';
+      return localStorage.getItem("movieTracker_viewMode") || "grid";
     } catch (error) {
-      console.warn('Could not load view mode from localStorage:', error);
-      return 'grid';
+      console.warn("Could not load view mode from localStorage:", error);
+      return "grid";
     }
   };
 
   const saveScrollPosition = () => {
     try {
-      localStorage.setItem('movieTracker_scrollPosition', window.scrollY.toString());
+      localStorage.setItem(
+        "movieTracker_scrollPosition",
+        window.scrollY.toString()
+      );
     } catch (error) {
-      console.warn('Could not save scroll position:', error);
+      console.warn("Could not save scroll position:", error);
     }
   };
 
   const restoreScrollPosition = () => {
     try {
-      const savedPosition = localStorage.getItem('movieTracker_scrollPosition');
+      const savedPosition = localStorage.getItem("movieTracker_scrollPosition");
       if (savedPosition) {
         // Use setTimeout to ensure the content has loaded
         setTimeout(() => {
           window.scrollTo(0, parseInt(savedPosition));
           // Clear the saved position after restoring
-          localStorage.removeItem('movieTracker_scrollPosition');
+          localStorage.removeItem("movieTracker_scrollPosition");
         }, 100);
       }
     } catch (error) {
-      console.warn('Could not restore scroll position:', error);
+      console.warn("Could not restore scroll position:", error);
     }
   };
 
@@ -127,24 +128,30 @@ const Browse = () => {
   const navigate = useNavigate();
 
   const streamingProviders = [
-    { id: 8, name: 'Netflix', value: '8' },
-    { id: 9, name: 'Amazon Prime Video', value: '9' },
-    { id: 15, name: 'Hulu', value: '15' },
-    { id: 337, name: 'Disney Plus', value: '337' },
-    { id: 1899, name: 'Max (HBO Max)', value: '1899' },
-    { id: 531, name: 'Paramount+', value: '531' },
-    { id: 386, name: 'Peacock', value: '386' }
+    { id: 8, name: "Netflix", value: "8" },
+    { id: 9, name: "Amazon Prime Video", value: "9" },
+    { id: 15, name: "Hulu", value: "15" },
+    { id: 337, name: "Disney Plus", value: "337" },
+    { id: 384, name: "HBO Max", value: "384" },
+    { id: 350, name: "Apple TV Plus", value: "350" },
+    { id: 531, name: "Paramount Plus", value: "531" },
+    { id: 386, name: "Peacock", value: "386" },
+    { id: 387, name: "Crunchyroll", value: "387" },
+    { id: 283, name: "Crackle", value: "283" },
+    { id: 257, name: "Funimation", value: "257" },
+    { id: 26, name: "Showtime", value: "26" },
+    { id: 43, name: "Starz", value: "43" },
   ];
 
   const sortOptions = [
-    { value: 'popularity.desc', label: 'Most Popular' },
-    { value: 'vote_average.desc', label: 'Top Rated' },
-    { value: 'vote_count.desc', label: 'Most Reviewed' },
-    { value: 'trending', label: 'Trending Now' },
-    { value: 'revenue.desc', label: 'Highest Grossing' },
-    { value: 'primary_release_date.desc', label: 'Recently Released' },
-    { value: 'release_date.desc', label: 'Newest First' },
-    { value: 'release_date.asc', label: 'Oldest First' }
+    { value: "popularity.desc", label: "Most Popular" },
+    { value: "vote_average.desc", label: "Top Rated" },
+    { value: "vote_count.desc", label: "Most Reviewed" },
+    { value: "trending", label: "Trending Now" },
+    { value: "revenue.desc", label: "Highest Grossing" },
+    { value: "primary_release_date.desc", label: "Recently Released" },
+    { value: "release_date.desc", label: "Newest First" },
+    { value: "release_date.asc", label: "Oldest First" },
   ];
 
   const handleSelect = (value) => {
@@ -161,18 +168,24 @@ const Browse = () => {
   const fetchGenres = async () => {
     try {
       const [movieResponse, tvResponse] = await Promise.all([
-        fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US`),
-        fetch(`${TMDB_BASE_URL}/genre/tv/list?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US`)
+        fetch(
+          `${TMDB_BASE_URL}/genre/movie/list?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US`
+        ),
+        fetch(
+          `${TMDB_BASE_URL}/genre/tv/list?api_key=${process.env.REACT_APP_TMDB_API_KEY}&language=en-US`
+        ),
       ]);
-      
+
       const movieData = await movieResponse.json();
       const tvData = await tvResponse.json();
-      
+
       const allGenres = [...movieData.genres, ...tvData.genres];
-      const uniqueGenres = Array.from(new Map(allGenres.map(item => [item.id, item])).values());
+      const uniqueGenres = Array.from(
+        new Map(allGenres.map((item) => [item.id, item])).values()
+      );
       setGenres(uniqueGenres);
     } catch (error) {
-      console.error('Error fetching genres:', error);
+      console.error("Error fetching genres:", error);
     }
   };
 
@@ -180,28 +193,27 @@ const Browse = () => {
     const baseParams = new URLSearchParams({
       api_key: process.env.REACT_APP_TMDB_API_KEY,
       page: page.toString(),
-      ...params
+      ...params,
     });
 
     // Add genre filter for discover endpoints
-    if (endpoint === 'discover' && filters.genre !== 'Any') {
-      baseParams.append('with_genres', filters.genre);
+    if (endpoint === "discover" && filters.genre !== "Any") {
+      baseParams.append("with_genres", filters.genre);
     }
 
     // Add year filter for discover endpoints
-    if (endpoint === 'discover' && filters.year !== 'Any') {
-      if (contentType === 'movie') {
-        baseParams.append('year', filters.year);
+    if (endpoint === "discover" && filters.year !== "Any") {
+      if (contentType === "movie") {
+        baseParams.append("year", filters.year);
       } else {
-        baseParams.append('first_air_date_year', filters.year);
+        baseParams.append("first_air_date_year", filters.year);
       }
     }
 
     // Add streaming provider filter for discover endpoints
-    if (endpoint === 'discover' && filters.provider.length > 0) {
-      baseParams.append('with_watch_providers', filters.provider.join('|'));
-      baseParams.append('watch_region', 'US'); // Default to US region
-      console.log('Applied streaming provider filter:', filters.provider); // Debug log
+    if (endpoint === "discover" && filters.provider !== "Any") {
+      baseParams.append("with_watch_providers", filters.provider);
+      baseParams.append("watch_region", "US"); // Default to US region
     }
 
     return `${TMDB_BASE_URL}/${endpoint}/${contentType}?${baseParams.toString()}`;
@@ -211,15 +223,16 @@ const Browse = () => {
     let filtered = [...results];
 
     // Apply genre filter for endpoints that don't support it natively
-    if (filters.genre !== 'Any') {
-      filtered = filtered.filter(item => 
-        item.genre_ids && item.genre_ids.includes(parseInt(filters.genre))
+    if (filters.genre !== "Any") {
+      filtered = filtered.filter(
+        (item) =>
+          item.genre_ids && item.genre_ids.includes(parseInt(filters.genre))
       );
     }
 
     // Apply year filter for search results and trending
-    if (filters.year !== 'Any') {
-      filtered = filtered.filter(item => {
+    if (filters.year !== "Any") {
+      filtered = filtered.filter((item) => {
         const releaseDate = item.release_date || item.first_air_date;
         if (!releaseDate) return false;
         const year = new Date(releaseDate).getFullYear();
@@ -242,44 +255,80 @@ const Browse = () => {
 
       if (searchQuery) {
         // Search endpoints - need post-filtering for genre/year
-        if (filters.format === 'Any' || filters.format === 'movie') {
-          apiUrls.push(buildApiUrl('search', 'movie', page, { query: encodeURIComponent(searchQuery) }));
+        if (filters.format === "Any" || filters.format === "movie") {
+          apiUrls.push(
+            buildApiUrl("search", "movie", page, {
+              query: encodeURIComponent(searchQuery),
+            })
+          );
         }
-        if (filters.format === 'Any' || filters.format === 'tv') {
-          apiUrls.push(buildApiUrl('search', 'tv', page, { query: encodeURIComponent(searchQuery) }));
+        if (filters.format === "Any" || filters.format === "tv") {
+          apiUrls.push(
+            buildApiUrl("search", "tv", page, {
+              query: encodeURIComponent(searchQuery),
+            })
+          );
         }
         needsPostFiltering = true;
-      } else if (filters.sort === 'trending') {
+      } else if (filters.sort === "trending") {
         // Trending endpoints - need post-filtering for genre/year
-        if (filters.format === 'Any' || filters.format === 'movie') {
-          apiUrls.push(buildApiUrl('trending', 'movie/week', page));
+        if (filters.format === "Any" || filters.format === "movie") {
+          apiUrls.push(buildApiUrl("trending", "movie/week", page));
         }
-        if (filters.format === 'Any' || filters.format === 'tv') {
-          apiUrls.push(buildApiUrl('trending', 'tv/week', page));
+        if (filters.format === "Any" || filters.format === "tv") {
+          apiUrls.push(buildApiUrl("trending", "tv/week", page));
         }
         needsPostFiltering = true;
       } else {
         // Discover endpoints - support all filters natively
-        const sortBy = filters.sort === 'vote_average.desc' ? 'vote_average.desc&vote_count.gte=200' : filters.sort;
-        
-        if (filters.format === 'Any' || filters.format === 'movie') {
-          apiUrls.push(buildApiUrl('discover', 'movie', page, { sort_by: sortBy }));
+        if (filters.format === "Any" || filters.format === "movie") {
+          if (filters.sort === "vote_average.desc") {
+            // For top-rated, get both highly rated AND popular movies, then combine them
+            // First get top rated movies with reasonable vote count
+            apiUrls.push(buildApiUrl("discover", "movie", page, { 
+              sort_by: "vote_average.desc",
+              "vote_count.gte": 500  // Higher threshold for more known movies
+            }));
+            // Also get popular movies to mix in well-known titles
+            if (page === 1) { // Only on first page to avoid duplicates
+              apiUrls.push(buildApiUrl("discover", "movie", 1, { 
+                sort_by: "popularity.desc" 
+              }));
+            }
+          } else {
+            apiUrls.push(buildApiUrl("discover", "movie", page, { sort_by: filters.sort }));
+          }
         }
-        if (filters.format === 'Any' || filters.format === 'tv') {
-          apiUrls.push(buildApiUrl('discover', 'tv', page, { sort_by: sortBy }));
+        if (filters.format === "Any" || filters.format === "tv") {
+          if (filters.sort === "vote_average.desc") {
+            // Same logic for TV shows
+            apiUrls.push(buildApiUrl("discover", "tv", page, { 
+              sort_by: "vote_average.desc",
+              "vote_count.gte": 500
+            }));
+            if (page === 1) {
+              apiUrls.push(buildApiUrl("discover", "tv", 1, { 
+                sort_by: "popularity.desc" 
+              }));
+            }
+          } else {
+            apiUrls.push(buildApiUrl("discover", "tv", page, { sort_by: filters.sort }));
+          }
         }
       }
 
       // Fetch data from all URLs
-      const responses = await Promise.all(apiUrls.map(url => fetch(url)));
-      const data = await Promise.all(responses.map(response => response.json()));
+      const responses = await Promise.all(apiUrls.map((url) => fetch(url)));
+      const data = await Promise.all(
+        responses.map((response) => response.json())
+      );
 
       // Process and format results
-      let formattedResults = data.flatMap(response => 
-        (response.results || []).map(item => ({
+      let formattedResults = data.flatMap((response) =>
+        (response.results || []).map((item) => ({
           ...item,
-          media_type: item.first_air_date ? 'tv' : 'movie',
-          vote_average: Math.round(item.vote_average * 10) / 10
+          media_type: item.first_air_date ? "tv" : "movie",
+          vote_average: Math.round(item.vote_average * 10) / 10,
         }))
       );
 
@@ -289,20 +338,25 @@ const Browse = () => {
       }
 
       // Remove duplicates (can happen when format is 'Any')
-      const uniqueResults = formattedResults.filter((item, index, self) => 
-        index === self.findIndex(t => t.id === item.id && t.media_type === item.media_type)
+      const uniqueResults = formattedResults.filter(
+        (item, index, self) =>
+          index ===
+          self.findIndex(
+            (t) => t.id === item.id && t.media_type === item.media_type
+          )
       );
 
       // Sort results if needed
-      if (filters.sort === 'vote_average.desc') {
+      if (filters.sort === "vote_average.desc") {
+        // Sort purely by IMDB rating from highest to lowest
         uniqueResults.sort((a, b) => b.vote_average - a.vote_average);
-      } else if (filters.sort === 'release_date.desc') {
+      } else if (filters.sort === "release_date.desc") {
         uniqueResults.sort((a, b) => {
           const dateA = new Date(a.release_date || a.first_air_date);
           const dateB = new Date(b.release_date || b.first_air_date);
           return dateB - dateA;
         });
-      } else if (filters.sort === 'release_date.asc') {
+      } else if (filters.sort === "release_date.asc") {
         uniqueResults.sort((a, b) => {
           const dateA = new Date(a.release_date || a.first_air_date);
           const dateB = new Date(b.release_date || b.first_air_date);
@@ -311,17 +365,19 @@ const Browse = () => {
       }
 
       // Calculate total pages
-      const maxTotalPages = Math.max(...data.map(response => response.total_pages || 1));
+      const maxTotalPages = Math.max(
+        ...data.map((response) => response.total_pages || 1)
+      );
       setTotalPages(maxTotalPages);
 
       // Update results
       if (shouldAppend) {
-        setResults(prevResults => [...prevResults, ...uniqueResults]);
+        setResults((prevResults) => [...prevResults, ...uniqueResults]);
       } else {
         setResults(uniqueResults);
       }
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error("Fetch error:", error);
       setResults([]);
     }
     setLoading(false);
@@ -365,15 +421,14 @@ const Browse = () => {
   };
 
   const handleRemoveFilter = (key) => {
-    const defaultValue = key === 'provider' ? [] : 'Any';
-    const newFilters = { ...filters, [key]: defaultValue };
+    const newFilters = { ...filters, [key]: "Any" };
     setFilters(newFilters);
     saveFiltersToStorage(newFilters);
   };
 
   const handleRemoveSearch = () => {
-    setSearchQuery('');
-    saveSearchToStorage('');
+    setSearchQuery("");
+    saveSearchToStorage("");
   };
 
   const handleViewModeChange = (mode) => {
@@ -387,39 +442,38 @@ const Browse = () => {
   };
 
   return (
-    <PageTransition>
-      <Layout style={{ background: '#f4f4f9', minHeight: '100vh' }}>
-        <Content style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+    <Layout style={{ background: "#f4f4f9", minHeight: "100vh" }}>
+      <Content style={{ padding: "24px", maxWidth: 1200, margin: "0 auto" }}>
         {/* Filters Row 1 */}
-        <FadeIn delay={0.1}>
-          <Row gutter={[16, 16]}>
-        {/* Search */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.1}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <Row gutter={[16, 16]}>
+          {/* Search */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Search</Text>
               <Input
                 placeholder="Search titles..."
                 prefix={<SearchOutlined />}
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 allowClear
                 loading={loading}
               />
             </div>
-          </SlideUp>
-        </Col>
+          </Col>
 
-        {/* Genre */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.15}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Genre */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Genre</Text>
               <Select
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 value={filters.genre}
-                onChange={(value) => handleFilterChange('genre', value)}
+                onChange={(value) => handleFilterChange("genre", value)}
                 placeholder="Select genre"
               >
                 <Select.Option value="Any">All Genres</Select.Option>
@@ -430,18 +484,18 @@ const Browse = () => {
                 ))}
               </Select>
             </div>
-          </SlideUp>
-        </Col>
+          </Col>
 
-        {/* Sort By */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.2}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Sort By */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Sort By</Text>
               <Select
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 value={filters.sort}
-                onChange={(value) => handleFilterChange('sort', value)}
+                onChange={(value) => handleFilterChange("sort", value)}
                 placeholder="Select sorting"
               >
                 {sortOptions.map((option) => (
@@ -451,18 +505,18 @@ const Browse = () => {
                 ))}
               </Select>
             </div>
-          </SlideUp>
-        </Col>
+          </Col>
 
-        {/* Year */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.25}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Year */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Year</Text>
               <Select
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 value={filters.year}
-                onChange={(value) => handleFilterChange('year', value)}
+                onChange={(value) => handleFilterChange("year", value)}
                 placeholder="Select year"
               >
                 <Select.Option value="Any">All Years</Select.Option>
@@ -476,28 +530,24 @@ const Browse = () => {
                 })}
               </Select>
             </div>
-          </SlideUp>
-        </Col>
-      </Row>
-        </FadeIn>
+          </Col>
+        </Row>
 
-      {/* Filters Row 2 */}
-      <FadeIn delay={0.2}>
+        {/* Filters Row 2 */}
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {/* Streaming Provider */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.1}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Streaming Provider */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Streaming</Text>
               <Select
-                mode="multiple"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 value={filters.provider}
-                onChange={(value) => handleFilterChange('provider', value)}
-                placeholder="Select services"
-                allowClear
-                maxTagCount="responsive"
+                onChange={(value) => handleFilterChange("provider", value)}
+                placeholder="Select service"
               >
+                <Select.Option value="Any">All Services</Select.Option>
                 {streamingProviders.map((provider) => (
                   <Select.Option key={provider.id} value={provider.value}>
                     {provider.name}
@@ -505,18 +555,18 @@ const Browse = () => {
                 ))}
               </Select>
             </div>
-          </SlideUp>
-        </Col>
+          </Col>
 
-        {/* Content Type */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.15}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Content Type */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>Content Type</Text>
               <Select
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 value={filters.format}
-                onChange={(value) => handleFilterChange('format', value)}
+                onChange={(value) => handleFilterChange("format", value)}
                 placeholder="Select type"
               >
                 <Select.Option value="Any">All Types</Select.Option>
@@ -524,181 +574,163 @@ const Browse = () => {
                 <Select.Option value="tv">TV Shows</Select.Option>
               </Select>
             </div>
-          </SlideUp>
-        </Col>
+          </Col>
 
-        {/* View Mode */}
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <SlideUp delay={0.2}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* View Mode */}
+          <Col xs={24} sm={12} md={6} lg={6}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <Text strong>View Mode</Text>
               <Space>
-                <HoverLift scale={1.05}>
-                  <Button
-                    type={viewMode === 'grid' ? 'primary' : 'default'}
-                    icon={<AppstoreOutlined />}
-                    onClick={() => handleViewModeChange('grid')}
-                  >
-                    Grid
-                  </Button>
-                </HoverLift>
-                <HoverLift scale={1.05}>
-                  <Button
-                    type={viewMode === 'compact' ? 'primary' : 'default'}
-                    icon={<TableOutlined />}
-                    onClick={() => handleViewModeChange('compact')}
-                  >
-                    Compact
-                  </Button>
-                </HoverLift>
+                <Button
+                  type={viewMode === "grid" ? "primary" : "default"}
+                  icon={<AppstoreOutlined />}
+                  onClick={() => handleViewModeChange("grid")}
+                >
+                  Grid
+                </Button>
+                <Button
+                  type={viewMode === "compact" ? "primary" : "default"}
+                  icon={<TableOutlined />}
+                  onClick={() => handleViewModeChange("compact")}
+                >
+                  Compact
+                </Button>
               </Space>
             </div>
-          </SlideUp>
-        </Col>
-      </Row>
-      </FadeIn>
-
+          </Col>
+        </Row>
 
         {/* Active Filters */}
-        {(searchQuery || Object.entries(filters).some(([key, value]) => 
-          key === 'provider' ? value.length > 0 : value !== 'Any'
-        )) && (
-          <FadeIn delay={0.4}>
-            <Row style={{ marginTop: 24, marginBottom: 24 }}>
-              <Col span={24}>
-                <LayoutWrapper>
-                  <Space size={[8, 16]} wrap>
-                    {searchQuery && (
-                      <Tag closable onClose={handleRemoveSearch}>
-                        Search: {searchQuery}
-                      </Tag>
-                    )}
-                    {Object.entries(filters).map(([key, value]) => {
-                      if (key === 'provider' && Array.isArray(value) && value.length > 0) {
-                        return value.map(providerValue => (
-                          <Tag 
-                            key={`${key}-${providerValue}`} 
-                            closable 
-                            onClose={() => {
-                              const newProviders = value.filter(p => p !== providerValue);
-                              handleFilterChange('provider', newProviders);
-                            }}
-                          >
-                            {`Streaming: ${streamingProviders.find(p => p.value === providerValue)?.name || providerValue}`}
-                          </Tag>
-                        ));
-                      } else if (key !== 'provider' && value !== 'Any') {
-                        return (
-                          <Tag 
-                            key={key} 
-                            closable 
-                            onClose={() => handleRemoveFilter(key)}
-                          >
-                            {key === 'sort' 
-                              ? `Sort: ${sortOptions.find(opt => opt.value === value)?.label}`
-                              : key === 'genre'
-                              ? `Genre: ${genres.find(g => g.id.toString() === value)?.name || value}`
-                              : key === 'format'
-                              ? `Type: ${value === 'movie' ? 'Movies' : value === 'tv' ? 'TV Shows' : value}`
-                              : `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
-                          </Tag>
-                        );
-                      }
-                      return null;
-                    })}
-                  </Space>
-                </LayoutWrapper>
-              </Col>
-            </Row>
-          </FadeIn>
-        )}
+        <Row style={{ marginTop: 24, marginBottom: 24 }}>
+          <Col span={24}>
+            <Space size={[8, 16]} wrap>
+              {searchQuery && (
+                <Tag closable onClose={handleRemoveSearch}>
+                  Search: {searchQuery}
+                </Tag>
+              )}
+              {Object.entries(filters).map(
+                ([key, value]) =>
+                  value !== "Any" && (
+                    <Tag
+                      key={key}
+                      closable
+                      onClose={() => handleRemoveFilter(key)}
+                    >
+                      {key === "sort"
+                        ? `Sort: ${
+                            sortOptions.find((opt) => opt.value === value)
+                              ?.label
+                          }`
+                        : key === "genre"
+                        ? `Genre: ${
+                            genres.find((g) => g.id.toString() === value)
+                              ?.name || value
+                          }`
+                        : key === "format"
+                        ? `Type: ${
+                            value === "movie"
+                              ? "Movies"
+                              : value === "tv"
+                              ? "TV Shows"
+                              : value
+                          }`
+                        : key === "provider"
+                        ? `Streaming: ${
+                            streamingProviders.find((p) => p.value === value)
+                              ?.name || value
+                          }`
+                        : `${
+                            key.charAt(0).toUpperCase() + key.slice(1)
+                          }: ${value}`}
+                    </Tag>
+                  )
+              )}
+            </Space>
+          </Col>
+        </Row>
 
         {/* Content Grid */}
-        {results.length > 0 && (
-          <StaggerContainer staggerDelay={0.08}>
-            <Row gutter={[16, 16]} style={{ marginTop: 32 }}>
-              {results.map((item) => (
-                <Col 
-                  key={`${item.id}-${item.media_type}`}
-                  xs={12}
-                  sm={8}
-                  md={viewMode === 'grid' ? 6 : viewMode === 'compact' ? 4 : 24}
-                >
-                  <StaggerItem>
-                    <HoverLift scale={1.03} shadow={true}>
-                      <Card
-                        hoverable
-                        loading={loading}
-                        onClick={() => handleSelect(`${item.media_type}-${item.id}`)}
-                        cover={
-                          <div style={{ 
-                            paddingTop: '150%', 
-                            position: 'relative',
-                            background: '#f0f0f0',
-                            overflow: 'hidden'
-                          }}>
-                            <img
-                              alt={item.title || item.name}
-                              src={item.poster_path 
-                                ? `${POSTER_BASE_URL}${item.poster_path}`
-                                : '/api/placeholder/300/450'}
-                              style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                              }}
-                            />
-                          </div>
-                        }
-                        styles={{ body: { padding: '12px' } }}
-                      >
-                        <Card.Meta
-                          title={<Text style={{ fontSize: 14 }}>{item.title || item.name}</Text>}
-                          description={
-                            <Space direction="vertical" size={0}>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                {new Date(item.release_date || item.first_air_date).getFullYear()} • {item.media_type}
-                              </Text>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                ⭐ {item.vote_average} ({item.vote_count} votes)
-                              </Text>
-                            </Space>
-                          }
-                        />
-                      </Card>
-                    </HoverLift>
-                  </StaggerItem>
-                </Col>
-              ))}
-            </Row>
-          </StaggerContainer>
-        )}
+        <Row gutter={[16, 16]}>
+          {results.map((item) => (
+            <Col
+              key={`${item.id}-${item.media_type}`}
+              xs={12}
+              sm={8}
+              md={viewMode === "grid" ? 6 : viewMode === "compact" ? 4 : 24}
+            >
+              <Card
+                hoverable
+                loading={loading}
+                onClick={() => handleSelect(`${item.media_type}-${item.id}`)}
+                cover={
+                  <div
+                    style={{
+                      paddingTop: "150%",
+                      position: "relative",
+                      background: "#f0f0f0",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <img
+                      alt={item.title || item.name}
+                      src={
+                        item.poster_path
+                          ? `${POSTER_BASE_URL}${item.poster_path}`
+                          : "/api/placeholder/300/450"
+                      }
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </div>
+                }
+                styles={{ body: { padding: "12px" } }}
+              >
+                <Card.Meta
+                  title={
+                    <Text style={{ fontSize: 14 }}>
+                      {item.title || item.name}
+                    </Text>
+                  }
+                  description={
+                    <Space direction="vertical" size={0}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {new Date(
+                          item.release_date || item.first_air_date
+                        ).getFullYear()}{" "}
+                        • {item.media_type}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        ⭐ {item.vote_average} ({item.vote_count} votes)
+                      </Text>
+                    </Space>
+                  }
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
 
         {/* Load More Button */}
         {results.length > 0 && currentPage < totalPages && (
-          <FadeIn delay={0.3}>
-            <Row justify="center" style={{ marginTop: 24 }}>
-              <Col>
-                <HoverLift scale={1.05}>
-                  <Button 
-                    type="primary"
-                    loading={loading}
-                    onClick={handleLoadMore}
-                    size="large"
-                  >
-                    Load More
-                  </Button>
-                </HoverLift>
-              </Col>
-            </Row>
-          </FadeIn>
+          <Row justify="center" style={{ marginTop: 24 }}>
+            <Col>
+              <Button type="primary" loading={loading} onClick={handleLoadMore}>
+                Load More
+              </Button>
+            </Col>
+          </Row>
         )}
-        </Content>
-      </Layout>
-    </PageTransition>
+      </Content>
+    </Layout>
   );
 };
 
