@@ -377,7 +377,11 @@ const Friends = ({ userId }) => {
       key: 'friends',
       label: `Friends (${friends.length})`,
       children: (
-        <div>
+        <div style={{ 
+          maxWidth: '800px', 
+          margin: '0 auto', 
+          padding: '30px 20px 30px 20px' 
+        }}>
           {friends.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -426,7 +430,11 @@ const Friends = ({ userId }) => {
       key: 'search',
       label: 'Find Friends',
       children: (
-        <div>
+        <div style={{ 
+          maxWidth: '800px', 
+          margin: '0 auto', 
+          padding: '30px 20px 30px 20px' 
+        }}>
           <Search
             placeholder="Search for users by username..."
             allowClear
@@ -435,7 +443,12 @@ const Friends = ({ userId }) => {
             onChange={(e) => setSearchQuery(e.target.value)}
             onSearch={searchUsers}
             loading={searching}
-            style={{ marginBottom: 20 }}
+            style={{ 
+              marginBottom: 20,
+              maxWidth: '500px',
+              margin: '0 auto 20px auto',
+              display: 'block'
+            }}
           />
           
           {searchResults.length > 0 && (
@@ -479,10 +492,12 @@ const Friends = ({ userId }) => {
           )}
           
           {searchQuery && searchResults.length === 0 && !searching && (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="No users found"
-            />
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No users found"
+              />
+            </div>
           )}
         </div>
       )
@@ -501,8 +516,12 @@ const Friends = ({ userId }) => {
         </Space>
       ),
       children: (
-        <div>
-          <Title level={4}>Friend Requests</Title>
+        <div style={{ 
+          maxWidth: '800px', 
+          margin: '0 auto', 
+          padding: '30px 20px 30px 20px' 
+        }}>
+          <Title level={4} style={{ textAlign: 'center', marginTop: '0' }}>Friend Requests</Title>
           {friendRequests.length === 0 ? (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -549,8 +568,30 @@ const Friends = ({ userId }) => {
   }
 
   return (
-    <div style={{ padding: '20px 0' }}>
-      <Tabs defaultActiveKey={isOwnProfile ? "search" : "friends"} items={tabItems} />
+    <div style={{ 
+      padding: '20px 0',
+      minHeight: '70vh',
+      backgroundColor: '#fafafa'
+    }}>
+      <div style={{ 
+        maxWidth: '1000px', 
+        margin: '0 auto',
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        <Tabs 
+          defaultActiveKey={isOwnProfile ? "search" : "friends"} 
+          items={tabItems}
+          style={{ padding: '0 20px' }}
+          tabBarStyle={{ 
+            margin: '0', 
+            paddingTop: '20px',
+            borderBottom: '1px solid #f0f0f0'
+          }}
+        />
+      </div>
     </div>
   );
 };
